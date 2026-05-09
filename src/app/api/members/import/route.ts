@@ -59,6 +59,7 @@ export async function POST(req: Request) {
         name: r.name,
         email: r.email,
         consent: true,
+        website: "", // honeypot — empty string skips the bot trap
         utmSource: r.utmSource,
         referralCode: r.referralCode
       });

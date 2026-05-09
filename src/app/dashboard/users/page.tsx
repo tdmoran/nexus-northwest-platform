@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import argon2 from "argon2";
+import bcrypt from "bcryptjs";
 import { OrganiserRole } from "@prisma/client";
 import { prisma } from "@/lib/db";
 import { requireUser } from "@/lib/session";
@@ -20,7 +20,7 @@ async function inviteUser(formData: FormData) {
   if (!canManageRole(actor.role, role)) redirect("/dashboard/users?error=forbidden_role");
   if (tempPassword.length < 12) redirect("/dashboard/users?error=password_too_short");
 
-  const passwordHash = await argon2.hash(tempPassword);
+  const passwordHash = await bcrypt.hash(tempPassword, 12);
   const created = await prisma.organiserUser.upsert({
     where: { email },
     update: { name, role, active: true },
@@ -93,7 +93,7 @@ async function resetPassword(formData: FormData) {
   if (!canManageRole(actor.role, target.role)) redirect("/dashboard/users?error=forbidden_role");
   if (newPassword.length < 12) redirect("/dashboard/users?error=password_too_short");
 
-  const passwordHash = await argon2.hash(newPassword);
+  const passwordHash = await bcrypt.hash(newPassword, 12);
   await prisma.organiserUser.update({ where: { id: targetId }, data: { passwordHash } });
   await audit({
     action: "organiser.user.password_reset",

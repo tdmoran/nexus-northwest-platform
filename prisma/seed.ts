@@ -1,53 +1,38 @@
 import { PrismaClient, OrganiserRole } from "@prisma/client";
-import argon2 from "argon2";
+import bcrypt from "bcryptjs";
 
 const prisma = new PrismaClient();
 
 async function main() {
-  const superAdminEmail = "admin@nexusnorthwest.local";
-  const superAdminPass = "ChangeMe!123";
-  const passwordHash = await argon2.hash(superAdminPass);
+  const password = "ChangeMe!123";
+  const hash = await bcrypt.hash(password, 12);
 
-  await prisma.organiserUser.upsert({
-    where: { email: superAdminEmail },
-    update: {},
-    create: {
-      email: superAdminEmail,
-      name: "Default Super Admin",
-      passwordHash,
-      role: OrganiserRole.SUPER_ADMIN,
-      active: true
-    }
+  // Use update on conflict so re-seeding rewrites the password hash —
+  // important when migrating between hashing libraries.
+  const fields = (
+    email: string,
+    name: string,
+    role: OrganiserRole
+  ) => ({
+    where: { email },
+    update: { passwordHash: hash, role, active: true },
+    create: { email, name, passwordHash: hash, role, active: true }
   });
 
-  await prisma.organiserUser.upsert({
-    where: { email: "manager@nexusnorthwest.local" },
-    update: {},
-    create: {
-      email: "manager@nexusnorthwest.local",
-      name: "Sample Manager",
-      passwordHash: await argon2.hash("ChangeMe!123"),
-      role: OrganiserRole.MANAGER,
-      active: true
-    }
-  });
+  await prisma.organiserUser.upsert(
+    fields("admin@nexusnorthwest.local", "Default Super Admin", OrganiserRole.SUPER_ADMIN)
+  );
+  await prisma.organiserUser.upsert(
+    fields("manager@nexusnorthwest.local", "Sample Manager", OrganiserRole.MANAGER)
+  );
+  await prisma.organiserUser.upsert(
+    fields("viewer@nexusnorthwest.local", "Sample Viewer", OrganiserRole.VIEWER)
+  );
 
-  await prisma.organiserUser.upsert({
-    where: { email: "viewer@nexusnorthwest.local" },
-    update: {},
-    create: {
-      email: "viewer@nexusnorthwest.local",
-      name: "Sample Viewer",
-      passwordHash: await argon2.hash("ChangeMe!123"),
-      role: OrganiserRole.VIEWER,
-      active: true
-    }
-  });
-
-  console.log("Seeded organiser users:");
-  console.log(`  Super Admin: ${superAdminEmail} / ${superAdminPass}`);
-  console.log("  Manager:     manager@nexusnorthwest.local / ChangeMe!123");
-  console.log("  Viewer:      viewer@nexusnorthwest.local / ChangeMe!123");
+  console.log("Seeded organiser users (bcrypt hashes):");
+  console.log(`  Super Admin: admin@nexusnorthwest.local / ${password}`);
+  console.log(`  Manager:     manager@nexusnorthwest.local / ${password}`);
+  console.log(`  Viewer:      viewer@nexusnorthwest.local / ${password}`);
 }
 
 main()

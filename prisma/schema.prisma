@@ -1,0 +1,266 @@
+// Nexus Northwest Platform - Prisma schema
+// Postgres-backed local mirror; Zoho CRM remains source of truth for member records
+// when ZOHO_ENABLED=true. See src/lib/zoho.ts for the integration boundary.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ----------------------------- Auth / Organisers ----------------------------
+
+enum OrganiserRole {
+  SUPER_ADMIN
+  ADMIN
+  MANAGER
+  VIEWER
+}
+
+model OrganiserUser {
+  id            String         @id @default(cuid())
+  email         String         @unique
+  name          String
+  passwordHash  String
+  role          OrganiserRole  @default(VIEWER)
+  active        Boolean        @default(true)
+  mfaEnrolled   Boolean        @default(false)
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  lastLoginAt   DateTime?
+
+  events        Event[]        @relation("EventCreator")
+  announcements Announcement[] @relation("AnnouncementSender")
+  actionsOwned  ActionItem[]   @relation("ActionOwner")
+  audit         AuditLog[]
+  managedMembers Member[]      @relation("MemberAddedBy")
+}
+
+// ----------------------------- Members --------------------------------------
+
+enum CommunicationChannel {
+  EMAIL
+  WHATSAPP
+  BOTH
+  OTHER
+}
+
+model Member {
+  id                  String   @id @default(cuid())
+  // Zoho id is null until first sync; email is the dedupe key
+  zohoId              String?  @unique
+  email               String   @unique
+  name                String
+  company             String?
+  phone               String?
+  whatsappNumber      String?
+  signalHandle        String?
+  linkedinUrl         String?
+  profilePictureUrl   String?
+  preferredChannel    CommunicationChannel @default(EMAIL)
+  emailConsent        Boolean  @default(true)
+  emailConsentAt      DateTime?
+  whatsappConsent     Boolean  @default(false)
+  whatsappConsentAt   DateTime?
+  emailOptOutAt       DateTime?
+  whatsappOptOutAt    DateTime?
+  emailBouncedAt      DateTime?
+  utmSource           String?
+  utmMedium           String?
+  utmCampaign         String?
+  utmContent          String?
+  referralCode        String?
+  speakerProspect     Boolean  @default(false)
+  notes               String?
+  tags                String[] @default([])
+  addedById           String?
+  addedBy             OrganiserUser? @relation("MemberAddedBy", fields: [addedById], references: [id])
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  rsvps               RSVP[]
+  tokens              Token[]
+  audit               AuditLog[]
+
+  @@index([createdAt])
+  @@index([utmSource])
+}
+
+// ----------------------------- Events ---------------------------------------
+
+model Event {
+  id              String   @id @default(cuid())
+  title           String
+  description     String
+  startsAt        DateTime
+  endsAt          DateTime?
+  timezone        String   @default("Europe/Dublin")
+  location        String
+  onlineUrl       String?
+  heroImageUrl    String?
+  capacity        Int?
+  rsvpEnabled     Boolean  @default(true)
+  reminderOffsets Int[]    @default([10080, 1440, 120])  // minutes before start: 7d, 24h, 2h
+  tags            String[] @default([])
+  createdById     String
+  createdBy       OrganiserUser @relation("EventCreator", fields: [createdById], references: [id])
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  rsvps           RSVP[]
+  announcements   Announcement[]
+  actions         ActionItem[]
+  reminders       Reminder[]
+
+  @@index([startsAt])
+}
+
+enum RSVPStatus {
+  YES
+  NO
+  MAYBE
+  CANCELLED
+}
+
+model RSVP {
+  id          String     @id @default(cuid())
+  eventId     String
+  memberId    String
+  status      RSVPStatus
+  channel     String?     // how the RSVP came in: email/whatsapp/web/etc
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+  event       Event      @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  member      Member     @relation(fields: [memberId], references: [id], onDelete: Cascade)
+
+  @@unique([eventId, memberId])
+  @@index([status])
+}
+
+// ----------------------------- Announcements --------------------------------
+
+enum Channel {
+  EMAIL
+  WHATSAPP
+}
+
+enum AnnouncementStatus {
+  DRAFT
+  QUEUED
+  SENT
+  FAILED
+}
+
+model Announcement {
+  id           String   @id @default(cuid())
+  eventId      String?
+  event        Event?   @relation(fields: [eventId], references: [id], onDelete: SetNull)
+  channel      Channel
+  subject      String?
+  body         String
+  audienceTag  String?            // freeform: "all", "rsvp_yes", "tag:speakers"
+  status       AnnouncementStatus @default(DRAFT)
+  sentAt       DateTime?
+  sentById     String?
+  sentBy       OrganiserUser?     @relation("AnnouncementSender", fields: [sentById], references: [id])
+  recipientCount Int               @default(0)
+  meta         Json?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+// ----------------------------- Actions --------------------------------------
+
+enum ActionType {
+  TASK
+  SPEAKER_PROSPECT
+  CONTRIBUTOR_PROSPECT
+  THEME
+}
+
+enum ActionStatus {
+  NEW
+  CONTACTED
+  CONFIRMED
+  SCHEDULED
+  COMPLETED
+  CANCELLED
+}
+
+model ActionItem {
+  id          String   @id @default(cuid())
+  type        ActionType   @default(TASK)
+  title       String
+  notes       String?
+  status      ActionStatus @default(NEW)
+  dueAt       DateTime?
+  ownerId     String?
+  owner       OrganiserUser? @relation("ActionOwner", fields: [ownerId], references: [id])
+  eventId     String?
+  event       Event?   @relation(fields: [eventId], references: [id], onDelete: SetNull)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([status])
+  @@index([dueAt])
+}
+
+// ----------------------------- Tokens (RSVP / Preferences / Unsubscribe) ----
+
+enum TokenPurpose {
+  RSVP
+  PREFERENCES
+  UNSUBSCRIBE
+}
+
+model Token {
+  id          String   @id @default(cuid())
+  token       String   @unique
+  purpose     TokenPurpose
+  memberId    String
+  member      Member   @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  eventId     String?  // populated for RSVP tokens
+  expiresAt   DateTime?
+  consumedAt  DateTime?
+  createdAt   DateTime @default(now())
+
+  @@index([memberId, purpose])
+}
+
+// ----------------------------- Reminders -----------------------------------
+//
+// Reminder records are written when a reminder fires for a given (event, offset)
+// pair so re-runs of the cron dispatcher are idempotent. A second per-recipient
+// row is written for individual sends — see ReminderSend.
+
+model Reminder {
+  id          String   @id @default(cuid())
+  eventId     String
+  event       Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  offsetMinutes Int
+  audience    String   // "all" or "rsvp_yes"
+  sentAt      DateTime @default(now())
+  recipientCount Int   @default(0)
+  meta        Json?
+
+  @@unique([eventId, offsetMinutes])
+}
+
+// ----------------------------- Audit ----------------------------------------
+
+model AuditLog {
+  id          String   @id @default(cuid())
+  actorId     String?
+  actor       OrganiserUser? @relation(fields: [actorId], references: [id])
+  memberId    String?
+  member      Member?  @relation(fields: [memberId], references: [id], onDelete: SetNull)
+  action      String   // e.g. "member.signup", "announcement.send", "rbac.role.change"
+  channel     String?
+  meta        Json?
+  createdAt   DateTime @default(now())
+
+  @@index([action, createdAt])
+}

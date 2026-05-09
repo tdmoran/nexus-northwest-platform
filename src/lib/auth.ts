@@ -1,7 +1,11 @@
-import type { NextAuthOptions, Provider } from "next-auth";
+import type { NextAuthOptions } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
 import GoogleProvider from "next-auth/providers/google";
 import AzureADProvider from "next-auth/providers/azure-ad";
+
+// Provider isn't a top-level next-auth export — derive the type from
+// NextAuthOptions["providers"] so it stays portable across SDK versions.
+type Provider = NextAuthOptions["providers"][number];
 import argon2 from "argon2";
 import { prisma } from "@/lib/db";
 import { env } from "@/lib/env";

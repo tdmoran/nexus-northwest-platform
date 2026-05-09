@@ -7,7 +7,7 @@
 }
 
 body {
-  background: linear-gradient(180deg, #f8fafc 0%, #eef2ff 100%);
+  background: #ffffff;
   min-height: 100vh;
 }
 
@@ -16,7 +16,7 @@ body {
   position: absolute;
   top: -40px;
   left: 8px;
-  background: #1f3585;
+  background: #0c243f;
   color: #fff;
   padding: 8px 12px;
   border-radius: 6px;
@@ -34,10 +34,41 @@ body {
 
 /* Stronger, consistent focus ring across all interactive elements. */
 *:focus-visible {
-  outline: 2px solid #2a46ac;
+  outline: 2px solid #2ea39a;
   outline-offset: 2px;
   border-radius: 4px;
 }
+
+/* Subtle animated grid behind the hero. */
+.hero-grid {
+  background-image:
+    linear-gradient(rgba(46, 163, 154, 0.08) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(46, 163, 154, 0.08) 1px, transparent 1px);
+  background-size: 56px 56px;
+  background-position: -1px -1px;
+  mask-image: radial-gradient(ellipse 80% 60% at 50% 30%, #000 40%, transparent 80%);
+}
+
+/* Slow drifting glow blobs in the hero — pure CSS, no JS. */
+.glow-blob {
+  position: absolute;
+  border-radius: 9999px;
+  filter: blur(80px);
+  opacity: 0.55;
+  pointer-events: none;
+}
+
+@keyframes drift-1 {
+  0%, 100% { transform: translate3d(-30%, -10%, 0); }
+  50%      { transform: translate3d(20%, 10%, 0); }
+}
+@keyframes drift-2 {
+  0%, 100% { transform: translate3d(30%, 0%, 0); }
+  50%      { transform: translate3d(-20%, 20%, 0); }
+}
+
+.glow-blob.a { animation: drift-1 18s ease-in-out infinite; }
+.glow-blob.b { animation: drift-2 22s ease-in-out infinite; }
 
 @media (prefers-reduced-motion: reduce) {
   *,
@@ -47,4 +78,5 @@ body {
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
   }
+  .glow-blob { animation: none !important; }
 }

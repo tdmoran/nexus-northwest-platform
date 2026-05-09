@@ -3,6 +3,7 @@ import { prisma } from "@/lib/db";
 import { lookupToken, consumeToken } from "@/lib/tokens";
 import { audit } from "@/lib/audit";
 import { applyRsvpDecision } from "@/server/waitlist";
+import { TokenPageShell } from "@/components/layout/PublicShell";
 import { RSVPStatus } from "@prisma/client";
 
 interface Props {
@@ -29,7 +30,6 @@ export default async function RsvpPage({ params, searchParams }: Props) {
   const responseRaw = (searchParams.response ?? "yes").toLowerCase();
   const requested = responseToStatus[responseRaw] ?? RSVPStatus.YES;
 
-  // RSVP tokens stay valid — re-clicking works to flip the decision.
   await consumeToken(tok, "RSVP");
 
   const { status: finalStatus } = await applyRsvpDecision(event, member, {
@@ -61,75 +61,109 @@ export default async function RsvpPage({ params, searchParams }: Props) {
         })
       : null;
 
-  return (
-    <main id="main" className="mx-auto max-w-xl px-4 py-16">
-      <div className="rounded-2xl bg-white p-8 shadow-sm ring-1 ring-slate-200">
-        {finalStatus === RSVPStatus.WAITLISTED ? (
-          <>
-            <h1 className="text-2xl font-bold text-slate-900">
-              You&rsquo;re on the waitlist, {member.name}.
-            </h1>
-            <p className="mt-3 text-slate-600">
-              <strong>{event.title}</strong> is currently at capacity. We&rsquo;ll email you
-              automatically if a spot opens up — no further action needed.
-              {waitlistPosition && waitlistPosition > 0 && (
-                <>
-                  {" "}You&rsquo;re position <strong>#{waitlistPosition}</strong> on the waitlist.
-                </>
-              )}
-            </p>
-          </>
-        ) : (
-          <>
-            <h1 className="text-2xl font-bold text-slate-900">
-              {labelFor(finalStatus)} &mdash; thanks {member.name}!
-            </h1>
-            <p className="mt-3 text-slate-700">
-              Your response has been recorded for <strong>{event.title}</strong>.
-            </p>
-            <ul className="mt-4 space-y-1 text-sm text-slate-600">
-              <li>
-                <strong>When:</strong> {dateStr}
-              </li>
-              <li>
-                <strong>Where:</strong> {event.location}
-              </li>
-            </ul>
-            {finalStatus === RSVPStatus.YES && (
-              <div className="mt-6 flex flex-wrap gap-3">
-                <a
-                  href={`/api/events/${event.id}/calendar`}
-                  className="rounded-lg bg-brand-600 px-4 py-2 text-sm font-semibold text-white hover:bg-brand-700"
-                >
-                  Add to calendar (.ics)
-                </a>
-              </div>
-            )}
-          </>
+  if (finalStatus === RSVPStatus.WAITLISTED) {
+    return (
+      <TokenPageShell
+        eyebrow="Waitlist"
+        title={`You're on the waitlist, ${member.name}.`}
+        subtitle={`${event.title} is at capacity. We'll email you automatically if a spot opens up — nothing further needed.`}
+      >
+        {waitlistPosition && waitlistPosition > 0 && (
+          <p className="rounded-2xl bg-amber-50 px-4 py-3 text-sm text-amber-800 ring-1 ring-amber-100">
+            You&rsquo;re position <strong>#{waitlistPosition}</strong> on the waitlist.
+          </p>
         )}
-        <p className="mt-6 text-xs text-slate-500">
-          Need to change your mind?{" "}
-          <a href={`/rsvp/${encodeURIComponent(tok)}?response=cancel`} className="underline">
-            Cancel my RSVP
+        <CancelLink token={tok} />
+      </TokenPageShell>
+    );
+  }
+
+  return (
+    <TokenPageShell
+      eyebrow={labelEyebrow(finalStatus)}
+      title={`${labelHeading(finalStatus)}, ${member.name}.`}
+      subtitle={`Your response has been recorded for ${event.title}.`}
+    >
+      {finalStatus === RSVPStatus.YES && (
+        <div className="flex justify-center">
+          <div className="flex h-20 w-20 items-center justify-center rounded-full bg-accent-50 text-accent-600 ring-1 ring-accent-100">
+            <svg
+              width="36"
+              height="36"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2.5"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              aria-hidden="true"
+            >
+              <polyline points="20 6 9 17 4 12" />
+            </svg>
+          </div>
+        </div>
+      )}
+      <dl className="mt-6 space-y-2 rounded-2xl bg-brand-50/60 p-4 text-sm">
+        <Row label="When" value={dateStr} />
+        <Row label="Where" value={event.location} />
+      </dl>
+
+      {finalStatus === RSVPStatus.YES && (
+        <div className="mt-6 flex flex-col items-center gap-3 sm:flex-row">
+          <a
+            href={`/api/events/${event.id}/calendar`}
+            className="inline-flex w-full items-center justify-center gap-2 rounded-full bg-gradient-to-b from-accent-400 to-accent-600 px-5 py-2.5 text-sm font-semibold text-white shadow-glow transition hover:from-accent-300 hover:to-accent-500 sm:w-auto"
+          >
+            Add to calendar (.ics)
           </a>
-          .
-        </p>
-      </div>
-    </main>
+        </div>
+      )}
+
+      <CancelLink token={tok} />
+    </TokenPageShell>
   );
 }
 
-function labelFor(status: RSVPStatus): string {
+function Row({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="flex flex-wrap items-baseline justify-between gap-x-3">
+      <dt className="text-xs font-semibold uppercase tracking-wide text-brand-400">{label}</dt>
+      <dd className="text-sm text-brand-700">{value}</dd>
+    </div>
+  );
+}
+
+function CancelLink({ token }: { token: string }) {
+  return (
+    <p className="mt-6 text-xs text-brand-400">
+      Need to change your mind?{" "}
+      <a
+        href={`/rsvp/${encodeURIComponent(token)}?response=cancel`}
+        className="font-semibold text-brand-600 underline-offset-2 hover:text-brand-800 hover:underline"
+      >
+        Cancel my RSVP
+      </a>
+      .
+    </p>
+  );
+}
+
+function labelEyebrow(status: RSVPStatus): string {
   switch (status) {
-    case RSVPStatus.YES:
-      return "You're in";
-    case RSVPStatus.NO:
-      return "Noted";
-    case RSVPStatus.MAYBE:
-      return "Got it — tentative";
-    case RSVPStatus.CANCELLED:
-      return "RSVP cancelled";
-    case RSVPStatus.WAITLISTED:
-      return "Waitlisted";
+    case RSVPStatus.YES:      return "You're in";
+    case RSVPStatus.NO:       return "Noted";
+    case RSVPStatus.MAYBE:    return "Tentative";
+    case RSVPStatus.CANCELLED:return "Cancelled";
+    case RSVPStatus.WAITLISTED:return "Waitlist";
+  }
+}
+
+function labelHeading(status: RSVPStatus): string {
+  switch (status) {
+    case RSVPStatus.YES:      return "Thanks for confirming";
+    case RSVPStatus.NO:       return "Thanks for letting us know";
+    case RSVPStatus.MAYBE:    return "Got it — tentative";
+    case RSVPStatus.CANCELLED:return "RSVP cancelled";
+    case RSVPStatus.WAITLISTED:return "On the waitlist";
   }
 }

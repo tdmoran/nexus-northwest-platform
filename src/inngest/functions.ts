@@ -202,6 +202,19 @@ export const dispatchAnnouncement = inngest.createFunction(
       return e;
     });
 
+    // step.run serialises its return value so Date fields come back as strings;
+    // re-hydrate before passing to helpers that expect Date.
+    const ev = {
+      id: target.id,
+      title: target.title,
+      description: target.description,
+      startsAt: new Date(target.startsAt),
+      endsAt: target.endsAt ? new Date(target.endsAt) : null,
+      timezone: target.timezone,
+      location: target.location,
+      heroImageUrl: target.heroImageUrl
+    };
+
     let sent = 0;
     let failed = 0;
 
@@ -209,8 +222,8 @@ export const dispatchAnnouncement = inngest.createFunction(
       const ok = await step.run(`send-${memberId}`, async () => {
         const member = await prisma.member.findUnique({ where: { id: memberId } });
         if (!member) return false;
-        if (channel === "EMAIL") return deliverOneEmail(member, target);
-        return deliverOneWhatsApp(member, target);
+        if (channel === "EMAIL") return deliverOneEmail(member, ev);
+        return deliverOneWhatsApp(member, ev);
       });
       if (ok) sent++;
       else failed++;

@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import { prisma } from "@/lib/db";
 import { consumeToken } from "@/lib/tokens";
 import { audit } from "@/lib/audit";
+import { TokenPageShell } from "@/components/layout/PublicShell";
 
 export default async function UnsubscribePage({ params }: { params: { token: string } }) {
   const tok = decodeURIComponent(params.token);
@@ -29,14 +30,22 @@ export default async function UnsubscribePage({ params }: { params: { token: str
   });
 
   return (
-    <main id="main" className="mx-auto max-w-xl px-4 py-16">
-      <div className="rounded-2xl bg-white p-8 shadow-sm ring-1 ring-slate-200">
-        <h1 className="text-xl font-bold text-slate-900">You&rsquo;ve been unsubscribed.</h1>
-        <p className="mt-3 text-slate-600">
-          We won&rsquo;t send you any more emails or WhatsApp messages. If this was a mistake, drop
-          us a line and we&rsquo;ll get you re-added.
-        </p>
-      </div>
-    </main>
+    <TokenPageShell
+      eyebrow="Unsubscribed"
+      title="You're off the list."
+      subtitle="We won't send you any more emails or WhatsApp messages."
+      size="md"
+    >
+      <p className="text-sm text-brand-600">
+        If this was a mistake,{" "}
+        <a
+          href="mailto:hello@nexusnorthwest.org"
+          className="font-semibold text-brand-700 underline-offset-2 hover:text-brand-800 hover:underline"
+        >
+          drop us a line
+        </a>{" "}
+        and we&rsquo;ll get you re-added.
+      </p>
+    </TokenPageShell>
   );
 }

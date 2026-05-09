@@ -3,7 +3,22 @@ import CredentialsProvider from "next-auth/providers/credentials";
 import argon2 from "argon2";
 import { prisma } from "@/lib/db";
 import { env } from "@/lib/env";
+import { verifyTOTP } from "@/lib/totp";
 import type { OrganiserRole } from "@prisma/client";
+
+export class MfaRequiredError extends Error {
+  constructor() {
+    super("MFA_REQUIRED");
+    this.name = "MfaRequiredError";
+  }
+}
+
+export class MfaInvalidError extends Error {
+  constructor() {
+    super("MFA_INVALID");
+    this.name = "MfaInvalidError";
+  }
+}
 
 declare module "next-auth" {
   interface Session {
@@ -39,7 +54,8 @@ export const authOptions: NextAuthOptions = {
       name: "Email + password",
       credentials: {
         email: { label: "Email", type: "email" },
-        password: { label: "Password", type: "password" }
+        password: { label: "Password", type: "password" },
+        mfaCode: { label: "Authenticator code", type: "text" }
       },
       async authorize(credentials) {
         if (!credentials?.email || !credentials?.password) return null;
@@ -51,6 +67,16 @@ export const authOptions: NextAuthOptions = {
 
         const ok = await argon2.verify(user.passwordHash, credentials.password);
         if (!ok) return null;
+
+        if (user.mfaEnrolled) {
+          if (!user.mfaSecret) {
+            // Inconsistent state — refuse login until an admin re-enrolls.
+            return null;
+          }
+          const code = (credentials.mfaCode ?? "").toString().trim();
+          if (!code) throw new MfaRequiredError();
+          if (!verifyTOTP(user.mfaSecret, code)) throw new MfaInvalidError();
+        }
 
         await prisma.organiserUser.update({
           where: { id: user.id },

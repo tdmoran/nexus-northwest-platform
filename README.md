@@ -27,12 +27,21 @@ MVP implementation of the Nexus Northwest Functional Specification (v1.2). One N
 - `vercel.json` ships with a Vercel Cron entry every 10 minutes. When `CRON_SECRET` is set in Vercel project env, Vercel automatically adds the bearer header
 - Per-event reminder offsets and audience (all / RSVP-Yes-only) configurable in the event form
 
-**Bounce / complaint webhook**
-- `POST /api/webhooks/email` — accepts SendGrid array shape and Resend single-event shape. Authenticate with `Authorization: Bearer $EMAIL_WEBHOOK_SECRET`. Bounces flip `emailBouncedAt`; bounces, complaints, and group-unsubscribes all clear `emailConsent` and stamp `emailOptOutAt`
-- Replace bearer with provider-specific HMAC verification before going to production
+**Bounce / complaint webhook (`POST /api/webhooks/email`)**
+- Verifies in this order: SendGrid Ed25519 signature (`SENDGRID_WEBHOOK_PUBLIC_KEY` set) → Resend Svix HMAC (`RESEND_WEBHOOK_SECRET` set) → fallback `Authorization: Bearer $EMAIL_WEBHOOK_SECRET`
+- Replay protection: signed payloads older than 5 minutes are rejected
+- Bounces flip `emailBouncedAt`; bounces, complaints, and group-unsubscribes clear `emailConsent` and stamp `emailOptOutAt`
+
+**MFA / two-factor (`/dashboard/settings/mfa`)**
+- TOTP (RFC 6238, SHA-1, 6 digits, 30 s) — works with 1Password, Google Authenticator, Authy, etc.
+- Self-enrollment with a QR code rendered via `/api/qr`; six-digit confirmation before enabling
+- Login form auto-prompts for the code when an account has MFA enrolled
+- Disable requires a current TOTP code; every state change is audited
+- Strongly recommended for Admin and Super Admin (UI flag highlights this)
 
 **Anti-abuse on sign-up**
-- Per-IP rate limit (5 attempts / 60 s, in-memory; swap for Redis when running multi-instance)
+- Per-IP rate limit (5 attempts / 60 s)
+- Pluggable backend: in-memory by default, Redis-backed when `REDIS_URL` is set (ioredis is an optional dep — single-instance setups skip the install)
 - Hidden honeypot field — bots that fill it get a 201 with no work done
 
 **Acquisition / reporting (`/dashboard/reports`)**

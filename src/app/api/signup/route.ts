@@ -8,7 +8,7 @@ const RATE_LIMIT = { limit: 5, windowMs: 60 * 1000 } as const;
 
 export async function POST(req: Request) {
   const ip = clientIpFrom(req.headers);
-  const limit = rateLimit({ key: `signup:${ip}`, ...RATE_LIMIT });
+  const limit = await rateLimit({ key: `signup:${ip}`, ...RATE_LIMIT });
   if (!limit.ok) {
     return NextResponse.json(
       { error: "Too many sign-up attempts. Please try again shortly." },

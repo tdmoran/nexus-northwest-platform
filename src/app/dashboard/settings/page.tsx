@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { prisma } from "@/lib/db";
 import { requireUser } from "@/lib/session";
 import { can } from "@/lib/rbac";
@@ -11,9 +12,38 @@ export default async function SettingsPage() {
     ? await prisma.organiserUser.findMany({ orderBy: { role: "asc" } })
     : [];
 
+  const me = await prisma.organiserUser.findUniqueOrThrow({
+    where: { id: user.id },
+    select: { mfaEnrolled: true }
+  });
+
   return (
     <div className="space-y-8">
       <h1 className="text-2xl font-bold text-slate-900">Settings</h1>
+
+      <Section title="Your account">
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="text-sm text-slate-700">
+              Two-factor authentication:{" "}
+              <strong className={me.mfaEnrolled ? "text-emerald-700" : "text-amber-700"}>
+                {me.mfaEnrolled ? "enabled" : "not enabled"}
+              </strong>
+            </p>
+            {(user.role === "ADMIN" || user.role === "SUPER_ADMIN") && !me.mfaEnrolled && (
+              <p className="mt-1 text-xs text-amber-700">
+                Strongly recommended for {user.role}.
+              </p>
+            )}
+          </div>
+          <Link
+            href="/dashboard/settings/mfa"
+            className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+          >
+            {me.mfaEnrolled ? "Manage MFA" : "Set up MFA"}
+          </Link>
+        </div>
+      </Section>
 
       <Section title="Integrations">
         <Row label="Email provider" value={env.EMAIL_PROVIDER} />

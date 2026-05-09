@@ -28,6 +28,7 @@ model OrganiserUser {
   role          OrganiserRole  @default(VIEWER)
   active        Boolean        @default(true)
   mfaEnrolled   Boolean        @default(false)
+  mfaSecret     String?        // base32-encoded TOTP secret; null until enrolled
   createdAt     DateTime       @default(now())
   updatedAt     DateTime       @updatedAt
   lastLoginAt   DateTime?

@@ -1,37 +1,75 @@
 // Provider-agnostic email webhook.
 //
-// Both SendGrid and Resend post JSON arrays of events. We accept either shape,
-// translate to a normalised BounceEvent[], and update member consent flags.
-// Authenticate via Authorization: Bearer ${EMAIL_WEBHOOK_SECRET}.
+// Authentication precedence:
+//  1. SendGrid Ed25519 signature (X-Twilio-Email-Event-Webhook-Signature) when
+//     SENDGRID_WEBHOOK_PUBLIC_KEY is configured.
+//  2. Svix/Resend signature (svix-id / svix-timestamp / svix-signature) when
+//     RESEND_WEBHOOK_SECRET is configured.
+//  3. Fallback: Authorization: Bearer ${EMAIL_WEBHOOK_SECRET}.
 //
-// Notes:
-// - Real production should verify provider-specific HMAC signatures (e.g.
-//   `X-Twilio-Email-Event-Webhook-Signature` for SendGrid). The bearer-token
-//   layer here is the simplest baseline and is upgraded by setting webhook
-//   secrets per provider and adding signature verification.
+// At least one of the above must validate. Replay protection: signed payloads
+// older than 5 minutes are rejected (timestamp embedded in the signed string).
 
 import { NextResponse } from "next/server";
 import { env } from "@/lib/env";
 import { log } from "@/lib/logger";
 import { recordBounces, type BounceEvent } from "@/server/bounces";
+import { verifySendgridSignature, verifySvixSignature } from "@/lib/webhook-verify";
 
 export const dynamic = "force-dynamic";
 
 interface SendgridEvent {
   email?: string;
-  event?: string;        // "bounce" | "dropped" | "spamreport" | "unsubscribe" | ...
+  event?: string;
   reason?: string;
-  type?: string;         // "blocked" | "bounce"
+  type?: string;
 }
 
 interface ResendEvent {
-  type?: string;         // "email.bounced" | "email.complained" | "email.delivered" | ...
+  type?: string;
   data?: { to?: string | string[]; email?: string; reason?: string };
 }
 
-function authorised(req: Request): boolean {
-  const header = req.headers.get("authorization") ?? "";
-  return header === `Bearer ${env.EMAIL_WEBHOOK_SECRET}`;
+function authoriseRequest(req: Request, rawBody: string): { ok: boolean; provider: string } {
+  // Provider 1: SendGrid Ed25519
+  if (env.SENDGRID_WEBHOOK_PUBLIC_KEY) {
+    const sig = req.headers.get("x-twilio-email-event-webhook-signature");
+    const ts = req.headers.get("x-twilio-email-event-webhook-timestamp");
+    if (sig && ts) {
+      const ok = verifySendgridSignature({
+        publicKeyBase64: env.SENDGRID_WEBHOOK_PUBLIC_KEY,
+        timestamp: ts,
+        signatureBase64: sig,
+        rawBody
+      });
+      if (ok) return { ok: true, provider: "sendgrid-signature" };
+    }
+  }
+
+  // Provider 2: Svix / Resend
+  if (env.RESEND_WEBHOOK_SECRET) {
+    const id = req.headers.get("svix-id");
+    const ts = req.headers.get("svix-timestamp");
+    const sig = req.headers.get("svix-signature");
+    if (id && ts && sig) {
+      const ok = verifySvixSignature({
+        signingSecret: env.RESEND_WEBHOOK_SECRET,
+        msgId: id,
+        timestamp: ts,
+        signatureHeader: sig,
+        rawBody
+      });
+      if (ok) return { ok: true, provider: "resend-svix" };
+    }
+  }
+
+  // Fallback: shared bearer token
+  const auth = req.headers.get("authorization") ?? "";
+  if (auth === `Bearer ${env.EMAIL_WEBHOOK_SECRET}`) {
+    return { ok: true, provider: "bearer" };
+  }
+
+  return { ok: false, provider: "none" };
 }
 
 function fromSendgrid(events: SendgridEvent[]): BounceEvent[] {
@@ -66,35 +104,34 @@ function fromResend(events: ResendEvent[]): BounceEvent[] {
 }
 
 function detectAndNormalise(payload: unknown): BounceEvent[] {
-  if (Array.isArray(payload)) {
-    // SendGrid sends a top-level array of events.
-    return fromSendgrid(payload as SendgridEvent[]);
-  }
-  if (payload && typeof payload === "object") {
-    // Resend sends a single event object per call.
-    return fromResend([payload as ResendEvent]);
-  }
+  if (Array.isArray(payload)) return fromSendgrid(payload as SendgridEvent[]);
+  if (payload && typeof payload === "object") return fromResend([payload as ResendEvent]);
   return [];
 }
 
 export async function POST(req: Request) {
-  if (!authorised(req)) {
+  const rawBody = await req.text();
+
+  const auth = authoriseRequest(req, rawBody);
+  if (!auth.ok) {
+    log.warn("bounce_webhook.unauthorised");
     return NextResponse.json({ error: "Unauthorised" }, { status: 401 });
   }
 
   let body: unknown;
   try {
-    body = await req.json();
+    body = JSON.parse(rawBody);
   } catch {
     return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
   }
 
   const events = detectAndNormalise(body);
   if (events.length === 0) {
-    log.info("bounce_webhook.no_actionable_events");
+    log.info("bounce_webhook.no_actionable_events", { provider: auth.provider });
     return NextResponse.json({ ok: true, updated: 0 });
   }
 
   const result = await recordBounces(events);
+  log.info("bounce_webhook.processed", { provider: auth.provider, ...result });
   return NextResponse.json({ ok: true, ...result });
 }

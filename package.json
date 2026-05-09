@@ -24,6 +24,8 @@
     "@prisma/client": "^5.20.0",
     "argon2": "^0.41.1",
     "next": "14.2.13",
+    "@sentry/nextjs": "^8.32.0",
+    "inngest": "^3.22.12",
     "next-auth": "^4.24.7",
     "qrcode": "^1.5.4",
     "react": "^18.3.1",

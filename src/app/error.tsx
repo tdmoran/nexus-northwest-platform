@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
+import * as Sentry from "@sentry/nextjs";
 
 export default function GlobalError({
   error,
@@ -10,10 +11,7 @@ export default function GlobalError({
   reset: () => void;
 }) {
   useEffect(() => {
-    // Surface the error in the browser console for development; in production,
-    // a real APM hook would replace this.
-    // eslint-disable-next-line no-console
-    console.error("App error", { digest: error.digest, message: error.message });
+    Sentry.captureException(error);
   }, [error]);
 
   return (

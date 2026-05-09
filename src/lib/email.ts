@@ -87,6 +87,41 @@ class ResendProvider implements EmailProvider {
   }
 }
 
+class MailgunProvider implements EmailProvider {
+  async send(msg: EmailMessage): Promise<{ id: string }> {
+    if (!env.EMAIL_API_KEY) throw new Error("EMAIL_API_KEY not set");
+    if (!env.MAILGUN_DOMAIN) throw new Error("MAILGUN_DOMAIN not set");
+
+    const base = env.MAILGUN_REGION === "us"
+      ? "https://api.mailgun.net"
+      : "https://api.eu.mailgun.net";
+    const url = `${base}/v3/${encodeURIComponent(env.MAILGUN_DOMAIN)}/messages`;
+
+    const form = new URLSearchParams();
+    form.set("from", env.EMAIL_FROM);
+    form.set("to", msg.to);
+    form.set("subject", msg.subject);
+    form.set("html", msg.html);
+    form.set("text", msg.text ?? stripHtml(msg.html));
+
+    const auth = Buffer.from(`api:${env.EMAIL_API_KEY}`).toString("base64");
+    const res = await fetch(url, {
+      method: "POST",
+      headers: {
+        Authorization: `Basic ${auth}`,
+        "Content-Type": "application/x-www-form-urlencoded"
+      },
+      body: form.toString()
+    });
+    if (!res.ok) {
+      const text = await res.text();
+      throw new Error(`mailgun: ${res.status} ${text}`);
+    }
+    const data = (await res.json()) as { id?: string };
+    return { id: data.id ?? "mailgun" };
+  }
+}
+
 function stripHtml(html: string): string {
   return html.replace(/<[^>]+>/g, "").replace(/\s+/g, " ").trim();
 }
@@ -96,6 +131,7 @@ function provider(): EmailProvider {
   if (cached) return cached;
   if (env.EMAIL_PROVIDER === "sendgrid") cached = new SendgridProvider();
   else if (env.EMAIL_PROVIDER === "resend") cached = new ResendProvider();
+  else if (env.EMAIL_PROVIDER === "mailgun") cached = new MailgunProvider();
   else cached = new StubEmailProvider();
   return cached;
 }

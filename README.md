@@ -54,9 +54,22 @@ MVP implementation of the Nexus Northwest Functional Specification (v1.2). One N
 - `/api/webhooks/whatsapp` handles Meta's subscription handshake (`GET`), per-message status receipts (`POST`), and STOP / UNSUBSCRIBE keyword opt-outs (clears `whatsappConsent` + audits)
 - See `docs/decisions.md` for the recommended rollout
 
+**Durable background jobs (Inngest)**
+- Set `INNGEST_EVENT_KEY` + `INNGEST_SIGNING_KEY` to flip the app into queue-backed mode
+- Four functions registered at `/api/inngest`: welcome email, Zoho member sync (bounded concurrency 5, 8 retries), reminders cron (`*/10 * * * *`), per-recipient announcement dispatch (concurrency 10, retry 3)
+- `step.run()` makes each operation durable — transient failures retry with backoff, completed steps don't re-run
+- Without Inngest, the app falls back to synchronous welcome emails + in-process Zoho sync + Vercel-Cron-driven reminders. No code change needed; the same service functions are called either way.
+
+**Email + Sentry**
+- Email providers: `stub | sendgrid | resend | mailgun` (Mailgun honours `MAILGUN_REGION=eu` for EU residency)
+- Sentry: drop a `SENTRY_DSN` (and `NEXT_PUBLIC_SENTRY_DSN`) to enable server + edge + browser error capture; no-op when unset
+
 **Operations**
 - `GET /api/health` — liveness + readiness (200 only when DB responds; 503 with diagnostics otherwise). Suitable for container orchestrators and uptime monitors
 - `/robots.txt` + `/sitemap.xml` — public site indexed; dashboard, API, and tokenised paths blocked
+- App refuses to start in production with the dev-default values for `CRON_SECRET`, `EMAIL_WEBHOOK_SECRET`, or `WHATSAPP_VERIFY_TOKEN`, and rejects `NEXTAUTH_SECRET` / `TOKEN_SECRET` shorter than 32 chars
+
+**Deployment** — see [`DEPLOY.md`](./DEPLOY.md) for step-by-step Vercel + Neon + Inngest + Resend or self-hosted Docker, plus a pre-launch checklist.
 
 **Product decisions** — see [`docs/decisions.md`](./docs/decisions.md) for the recommendations against spec §16 open questions (Zoho module, email provider, WhatsApp rollout, RSVP options, cancellation, mandatory fields, multi-region scaling)
 

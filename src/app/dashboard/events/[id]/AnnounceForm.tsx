@@ -37,11 +37,21 @@ export function AnnounceForm({
         const data = (await res.json().catch(() => ({}))) as { error?: string };
         throw new Error(data.error ?? `HTTP ${res.status}`);
       }
-      const data = (await res.json()) as { recipientCount: number; failedCount: number };
-      setResult(
-        `Sent to ${data.recipientCount} member(s)` +
-          (data.failedCount > 0 ? `; ${data.failedCount} failed` : "")
-      );
+      const data = (await res.json()) as {
+        recipientCount: number;
+        failedCount: number;
+        queued?: boolean;
+      };
+      if (data.queued) {
+        setResult(
+          `Queued to ${data.recipientCount} member(s). Status updates as the worker dispatches.`
+        );
+      } else {
+        setResult(
+          `Sent to ${data.recipientCount} member(s)` +
+            (data.failedCount > 0 ? `; ${data.failedCount} failed` : "")
+        );
+      }
       router.refresh();
     } catch (err) {
       setError((err as Error).message);

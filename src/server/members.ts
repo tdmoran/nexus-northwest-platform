@@ -7,6 +7,10 @@ import { issueToken } from "@/lib/tokens";
 import { preferencesUrl, unsubscribeUrl } from "@/lib/urls";
 import type { SignupInput } from "@/lib/validation";
 import { log } from "@/lib/logger";
+import { env } from "@/lib/env";
+import { inngest } from "@/inngest/client";
+
+const inngestActive = (): boolean => Boolean(env.INNGEST_EVENT_KEY);
 
 export async function signupMember(input: SignupInput): Promise<{
   memberId: string;
@@ -42,14 +46,6 @@ export async function signupMember(input: SignupInput): Promise<{
 
   const created = !existing;
 
-  // Best-effort Zoho sync; failures do not block sign-up. The helper records
-  // failures into ZohoSyncFailure so an organiser can retry from the dashboard.
-  await syncMemberAndTrack(member);
-
-  // Issue long-lived tokens for preferences + unsubscribe.
-  const prefToken = await issueToken({ memberId: member.id, purpose: "PREFERENCES" });
-  const unsubToken = await issueToken({ memberId: member.id, purpose: "UNSUBSCRIBE" });
-
   await audit({
     action: created ? "member.signup" : "member.signup.duplicate",
     memberId: member.id,
@@ -65,29 +61,43 @@ export async function signupMember(input: SignupInput): Promise<{
     }
   });
 
-  if (created) {
-    const tmpl = welcomeEmail({
-      name: member.name,
-      preferencesUrl: preferencesUrl(prefToken),
-      unsubscribeUrl: unsubscribeUrl(unsubToken)
-    });
-    try {
-      await sendEmail({ to: member.email, subject: tmpl.subject, html: tmpl.html });
-      await audit({
-        action: "email.welcome.sent",
-        memberId: member.id,
-        channel: "email"
-      });
-    } catch (err) {
-      log.error("welcome_email.failed", { memberId: member.id, err: String(err) });
-      await audit({
-        action: "email.welcome.failed",
-        memberId: member.id,
-        channel: "email",
-        meta: { error: (err as Error).message }
-      });
-    }
+  // Side effects: when Inngest is wired up, fire-and-forget for durable retry.
+  // Otherwise run synchronously (dev/test or single-instance setups without Inngest).
+  if (inngestActive()) {
+    await inngest.send([
+      { name: "zoho/member.sync", data: { memberId: member.id } },
+      ...(created ? [{ name: "member/welcome.send" as const, data: { memberId: member.id } }] : [])
+    ]);
+  } else {
+    await syncMemberAndTrack(member);
+    if (created) await sendWelcomeSync(member.id, member.name, member.email);
   }
 
   return { memberId: member.id, created };
+}
+
+async function sendWelcomeSync(
+  memberId: string,
+  name: string,
+  emailAddr: string
+): Promise<void> {
+  const prefToken = await issueToken({ memberId, purpose: "PREFERENCES" });
+  const unsubToken = await issueToken({ memberId, purpose: "UNSUBSCRIBE" });
+  const tmpl = welcomeEmail({
+    name,
+    preferencesUrl: preferencesUrl(prefToken),
+    unsubscribeUrl: unsubscribeUrl(unsubToken)
+  });
+  try {
+    await sendEmail({ to: emailAddr, subject: tmpl.subject, html: tmpl.html });
+    await audit({ action: "email.welcome.sent", memberId, channel: "email" });
+  } catch (err) {
+    log.error("welcome_email.failed", { memberId, err: String(err) });
+    await audit({
+      action: "email.welcome.failed",
+      memberId,
+      channel: "email",
+      meta: { error: (err as Error).message }
+    });
+  }
 }

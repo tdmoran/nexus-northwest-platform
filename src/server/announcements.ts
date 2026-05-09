@@ -7,6 +7,8 @@ import { issueToken } from "@/lib/tokens";
 import { rsvpUrl, preferencesUrl, unsubscribeUrl } from "@/lib/urls";
 import { Channel, AnnouncementStatus, type Member } from "@prisma/client";
 import { log } from "@/lib/logger";
+import { env } from "@/lib/env";
+import { inngest } from "@/inngest/client";
 
 export interface SendAnnouncementInput {
   eventId: string;
@@ -19,6 +21,7 @@ export async function sendEventAnnouncement(input: SendAnnouncementInput): Promi
   announcementId: string;
   recipientCount: number;
   failedCount: number;
+  queued?: boolean;
 }> {
   const event = await prisma.event.findUniqueOrThrow({ where: { id: input.eventId } });
 
@@ -36,6 +39,28 @@ export async function sendEventAnnouncement(input: SendAnnouncementInput): Promi
     }
   });
 
+  // When Inngest is wired up, hand the work off durably and return immediately.
+  // The dashboard polls Announcement.status to see SENT / FAILED.
+  if (env.INNGEST_EVENT_KEY) {
+    await inngest.send({
+      name: "announcement/dispatch",
+      data: {
+        announcementId: announcement.id,
+        eventId: event.id,
+        memberIds: recipients.map((m) => m.id),
+        channel: input.channel,
+        actorId: input.actorId
+      }
+    });
+    return {
+      announcementId: announcement.id,
+      recipientCount: recipients.length,
+      failedCount: 0,
+      queued: true
+    };
+  }
+
+  // Synchronous fallback (dev/test or single-instance without Inngest).
   let sent = 0;
   let failed = 0;
 

@@ -6,6 +6,11 @@ import { canManageAnyUsers } from "@/lib/rbac-users";
 import { SessionProvider } from "./SessionProvider";
 import { LogoutButton } from "./LogoutButton";
 
+// Every dashboard route is auth-gated and DB-backed. Force dynamic so Next.js
+// doesn't try to pre-render them at build time (which hangs on DB reads in
+// Vercel's build sandbox).
+export const dynamic = "force-dynamic";
+
 const BASE_NAV = [
   { href: "/dashboard", label: "Overview" },
   { href: "/dashboard/events", label: "Events" },

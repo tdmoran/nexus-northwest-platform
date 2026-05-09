@@ -1,3 +1,4 @@
+import Image from "next/image";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { currentUser } from "@/lib/session";
@@ -31,8 +32,9 @@ export default async function DashboardLayout({ children }: { children: React.Re
       <div className="min-h-screen bg-slate-50">
         <header className="border-b border-slate-200 bg-white">
           <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3">
-            <Link href="/dashboard" className="text-base font-bold text-brand-700">
-              Nexus Northwest &middot; Organiser
+            <Link href="/dashboard" className="flex items-center gap-2 text-base font-bold text-brand-700">
+              <Image src="/logo.png" alt="" width={32} height={32} className="h-8 w-8" />
+              <span>Organiser</span>
             </Link>
             <div className="flex items-center gap-4 text-sm text-slate-600">
               <span>

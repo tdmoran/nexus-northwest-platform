@@ -1,0 +1,172 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Nexus Northwest Platform — Build Summary</title>
+<style>
+  @page { size: A4; margin: 22mm 18mm; }
+  * { box-sizing: border-box; }
+  html, body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    color: #0c243f;
+    line-height: 1.45;
+    font-size: 10.5pt;
+    margin: 0;
+  }
+  h1, h2, h3 { color: #0c243f; line-height: 1.2; margin: 0; }
+  h1 { font-size: 24pt; letter-spacing: -0.01em; }
+  h2 { font-size: 14pt; margin-top: 22px; padding-top: 12px; border-top: 1px solid #e3e9f3; letter-spacing: -0.005em; }
+  h3 { font-size: 11pt; margin-top: 14px; color: #19655f; }
+  p { margin: 6px 0; }
+  ul { padding-left: 18px; margin: 6px 0; }
+  li { margin: 2px 0; }
+  code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 9.5pt; background: #f5f7fb; padding: 1px 5px; border-radius: 3px; color: #19655f; }
+  .eyebrow { font-size: 8.5pt; letter-spacing: 0.2em; text-transform: uppercase; color: #1f817a; font-weight: 700; }
+  .lead { color: #27406a; font-size: 11.5pt; margin-top: 6px; }
+  .meta { color: #8da4c2; font-size: 9pt; margin-top: 10px; }
+  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px 24px; margin-top: 8px; }
+  .stat { background: #f5f7fb; border-radius: 8px; padding: 10px 14px; }
+  .stat .label { font-size: 8pt; letter-spacing: 0.15em; text-transform: uppercase; color: #1f817a; font-weight: 700; }
+  .stat .value { font-size: 16pt; font-weight: 700; color: #0c243f; margin-top: 3px; }
+  .stat .sub { font-size: 9pt; color: #8da4c2; margin-top: 1px; }
+  .pill { display: inline-block; background: #d3f0eb; color: #19655f; padding: 1px 8px; border-radius: 9999px; font-size: 8.5pt; font-weight: 600; }
+  .row { display: flex; justify-content: space-between; gap: 24px; align-items: baseline; }
+  .row .key { color: #27406a; font-weight: 600; }
+  .row .val { color: #0c243f; font-family: ui-monospace, monospace; font-size: 9.5pt; }
+  table { width: 100%; border-collapse: collapse; margin-top: 8px; font-size: 9.5pt; }
+  th, td { text-align: left; padding: 5px 8px; border-bottom: 1px solid #e3e9f3; }
+  th { font-size: 8.5pt; letter-spacing: 0.1em; text-transform: uppercase; color: #1f817a; }
+  .tick { color: #19655f; font-weight: 700; }
+  .warn { color: #b45309; }
+  .footer { margin-top: 28px; padding-top: 14px; border-top: 1px solid #e3e9f3; font-size: 8.5pt; color: #8da4c2; display: flex; justify-content: space-between; }
+  .badge { display: inline-block; padding: 2px 9px; border-radius: 9999px; font-size: 8.5pt; font-weight: 700; letter-spacing: 0.05em; }
+  .badge.live { background: #d3f0eb; color: #19655f; }
+  .hero { background: linear-gradient(180deg, #081728 0%, #0c243f 60%, #162d52 100%); color: #fff; padding: 28px 26px; border-radius: 12px; margin-bottom: 18px; }
+  .hero h1 { color: #fff; font-size: 22pt; }
+  .hero .lead { color: rgba(255,255,255,0.78); }
+  .hero .pill { background: rgba(46,163,154,0.16); color: #7ec9bf; }
+</style>
+</head>
+<body>
+
+<section class="hero">
+  <span class="pill">Build summary · 2026-05-09</span>
+  <h1>Nexus Northwest Platform</h1>
+  <p class="lead">A community platform for Sligo's tech network — sign-up, RSVP, organiser dashboard, and everything in between. Live in production.</p>
+  <div style="margin-top: 14px; display: flex; gap: 14px; flex-wrap: wrap; font-size: 9.5pt;">
+    <span><strong style="color:#7ec9bf">Live:</strong> nnw-platform.vercel.app</span>
+    <span><strong style="color:#7ec9bf">Repo:</strong> github.com/tdmoran/nexus-northwest-platform</span>
+    <span><strong style="color:#7ec9bf">Status:</strong> deployed</span>
+  </div>
+</section>
+
+<h2>What it is</h2>
+<p>A purpose-built platform replacing the Sligo Tech Meetup workflow with a single web property. Members sign up with name + email, RSVP to events with one click from email, and organisers manage everything from a brand-led dashboard. Built end-to-end against the Nexus Northwest Functional Specification v1.2 and most of its Phase 2 list.</p>
+
+<h2>Headline numbers</h2>
+<div class="grid">
+  <div class="stat"><div class="label">Commits on main</div><div class="value">~25</div><div class="sub">All pushed to GitHub</div></div>
+  <div class="stat"><div class="label">Files in repo</div><div class="value">200+</div><div class="sub">~16,000 lines</div></div>
+  <div class="stat"><div class="label">Database migrations</div><div class="value">21</div><div class="sub">All applied to Neon</div></div>
+  <div class="stat"><div class="label">CI jobs</div><div class="value">3</div><div class="sub">unit · integration · e2e</div></div>
+  <div class="stat"><div class="label">Test files</div><div class="value">12+</div><div class="sub">unit + DB-backed</div></div>
+  <div class="stat"><div class="label">Cron jobs</div><div class="value">5</div><div class="sub">reminders · scheduled · GDPR · series · surveys</div></div>
+</div>
+
+<h2>Stack</h2>
+<table>
+  <thead><tr><th>Layer</th><th>Choice</th><th>Notes</th></tr></thead>
+  <tbody>
+    <tr><td>Frontend + API</td><td>Next.js 14 App Router · TypeScript</td><td>Single codebase for landing, public pages, dashboard, and API routes</td></tr>
+    <tr><td>Database</td><td>Neon Postgres (EU, Frankfurt)</td><td>Pooled + direct connections; pgbouncer-aware Prisma</td></tr>
+    <tr><td>ORM</td><td>Prisma 5</td><td>21 migrations committed; auto-generated client at build</td></tr>
+    <tr><td>Auth</td><td>NextAuth · bcryptjs · TOTP · SSO</td><td>Email + password, optional Google / Azure AD, magic-link, MFA</td></tr>
+    <tr><td>Email</td><td>Resend (EU)</td><td>Pluggable: stub / sendgrid / resend / mailgun</td></tr>
+    <tr><td>Background jobs</td><td>Inngest-ready · Vercel Cron fallback</td><td>Durable retries, idempotent reminder dispatch</td></tr>
+    <tr><td>Observability</td><td>Structured logger · Sentry hooks · /api/health</td><td>EU residency throughout</td></tr>
+    <tr><td>Hosting</td><td>Vercel (Hobby tier)</td><td>Frankfurt region, daily crons</td></tr>
+    <tr><td>Source</td><td>GitHub · Actions CI</td><td>typecheck · prisma validate · vitest · build · DB integration · Playwright + axe-core</td></tr>
+  </tbody>
+</table>
+
+<h2>What's deployed</h2>
+
+<h3>Public surface</h3>
+<ul>
+  <li><strong>Landing</strong> (<code>/</code>) — branded hero, animated glow, sign-up form with UTM capture</li>
+  <li><strong>Events</strong> (<code>/events</code>) — public card grid with date badges, attendance pills, .ics download</li>
+  <li><strong>Community</strong> (<code>/community</code>) — opt-in member directory</li>
+  <li><strong>Privacy</strong> (<code>/privacy</code>) — GDPR-aligned policy</li>
+  <li><strong>Tokenised flows</strong> — RSVP, preferences, unsubscribe, survey, magic-link callback</li>
+</ul>
+
+<h3>Organiser dashboard (RBAC)</h3>
+<ul>
+  <li>Overview · Events (CRUD, announce, check-in, survey) · Series (recurring) · Members (search, import CSV, export CSV, detail with engagement score) · Tags (segments)</li>
+  <li>Actions (tasks + speaker pipeline) · Reports (sign-ups, sources, RSVP conversion, cohort retention) · QR + tracked links</li>
+  <li>Audit log · Compliance (GDPR pending requests) · Settings · Users (invite, role-change, password reset) · MFA (TOTP)</li>
+</ul>
+
+<h3>Operations</h3>
+<ul>
+  <li><code>/api/health</code> — liveness + DB readiness</li>
+  <li><code>/robots.txt</code>, <code>/sitemap.xml</code> — public/private split honoured</li>
+  <li><code>scripts/preflight.sh</code> — pre-launch CD gate that probes 9 endpoints</li>
+  <li>Production safety: refuses to boot with dev-default secrets</li>
+</ul>
+
+<h2>Spec coverage</h2>
+<table>
+  <thead><tr><th>Item</th><th>Status</th></tr></thead>
+  <tbody>
+    <tr><td>FR-001 to FR-010 (MVP requirements)</td><td><span class="tick">✓ All implemented</span></td></tr>
+    <tr><td>FR-011 (QR + tracked links)</td><td><span class="tick">✓ Phase 2 done</span></td></tr>
+    <tr><td>FR-012 (direct WhatsApp Cloud API)</td><td><span class="tick">✓ Boundary built, gated by flag</span></td></tr>
+    <tr><td>NFR-001 mobile-first landing</td><td><span class="tick">✓</span></td></tr>
+    <tr><td>NFR-002 server-side credentials</td><td><span class="tick">✓ Zod-validated at boot</span></td></tr>
+    <tr><td>NFR-003 server-side RBAC</td><td><span class="tick">✓ Capability matrix tested</span></td></tr>
+    <tr><td>NFR-004 audit logging</td><td><span class="tick">✓ Append-only, every send/edit</span></td></tr>
+    <tr><td>NFR-005 Zoho resilience</td><td><span class="tick">✓ Failure table + retry</span></td></tr>
+    <tr><td>NFR-006 consent + opt-out</td><td><span class="tick">✓ Tokenised, enforced on send</span></td></tr>
+    <tr><td>§16 product decisions</td><td><span class="tick">✓ All 7 documented in docs/decisions.md</span></td></tr>
+  </tbody>
+</table>
+
+<h2>Production status</h2>
+<table>
+  <thead><tr><th>Endpoint</th><th>Status</th></tr></thead>
+  <tbody>
+    <tr><td><code>/</code> landing</td><td><span class="tick">200 ✓</span></td></tr>
+    <tr><td><code>/login</code></td><td><span class="tick">200 ✓</span></td></tr>
+    <tr><td><code>/dashboard</code></td><td><span class="tick">307 → /login (auth gate working)</span></td></tr>
+    <tr><td><code>/events</code>, <code>/community</code>, <code>/privacy</code></td><td><span class="tick">200 ✓</span></td></tr>
+    <tr><td><code>/api/health</code></td><td><span class="tick">200 ✓ DB latency ~465 ms</span></td></tr>
+    <tr><td>Sign-in (bcrypt verified)</td><td><span class="tick">Working with seeded credentials</span></td></tr>
+    <tr><td>Welcome email delivery</td><td><span class="warn">Pending: Resend domain verification (or use Resend-account email for testing)</span></td></tr>
+  </tbody>
+</table>
+
+<h2>Architecture highlights</h2>
+<ul>
+  <li><strong>Boundaries kept clean</strong> — Zoho, email, WhatsApp, rate-limit, tokens all behind interfaces; swap providers without touching callsites</li>
+  <li><strong>Tokens</strong> — HMAC-signed via <code>TOKEN_SECRET</code>, DB-backed for instant revocation. RSVP tokens reusable; unsubscribe single-use; survey tokens 30-day TTL</li>
+  <li><strong>RBAC</strong> — capability matrix matches spec §4 row-for-row; server-enforced; tested per role</li>
+  <li><strong>Reliability</strong> — sign-up never blocks on Zoho or email failures; failures persist for retry; durable Inngest steps when configured</li>
+  <li><strong>Compliance</strong> — GDPR Article 17 + 20 self-service from preferences page; 30-day grace; daily scrub cron; soft-deleted members excluded from every recipient query</li>
+  <li><strong>Brand-led UX</strong> — Poppins typography, navy/teal palette pulled from nexusnorthwest.org, animated hero, glass cards, accessible focus states, prefers-reduced-motion honoured</li>
+</ul>
+
+<h2>What still needs your attention</h2>
+<ul>
+  <li><strong>Email domain verification</strong> — add <code>nexusnorthwest.org</code> to Resend, configure 3 DNS records, switch <code>EMAIL_FROM</code> from <code>onboarding@resend.dev</code> to <code>hello@nexusnorthwest.org</code></li>
+  <li><strong>Change seeded admin password</strong> — <code>admin@nexusnorthwest.local</code> currently uses <code>ChangeMe!123</code></li>
+  <li><strong>Optional production wins</strong> — verified Inngest connection, SSO enablement, Sentry DSN, custom domain on Vercel</li>
+</ul>
+
+<div class="footer">
+  <span>Generated 2026-05-09 · Nexus Northwest Platform · Sligo, Ireland</span>
+  <span>github.com/tdmoran/nexus-northwest-platform</span>
+</div>
+
+</body>
+</html>

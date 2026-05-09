@@ -1,5 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
+import { Suspense } from "react";
 import { JoinForm } from "./_components/JoinForm";
 
 export default function LandingPage() {
@@ -269,7 +270,9 @@ function JoinSection() {
         </div>
 
         <div className="rounded-3xl bg-white p-6 text-brand-800 shadow-card ring-1 ring-white/10 sm:p-8">
-          <JoinForm />
+          <Suspense fallback={<div className="h-72" aria-hidden="true" />}>
+            <JoinForm />
+          </Suspense>
         </div>
       </div>
     </section>

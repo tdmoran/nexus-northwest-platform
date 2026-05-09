@@ -14,4 +14,6 @@ process.env.EMAIL_PROVIDER = process.env.EMAIL_PROVIDER ?? "stub";
 process.env.EMAIL_API_KEY = process.env.EMAIL_API_KEY ?? "";
 process.env.EMAIL_WEBHOOK_SECRET = process.env.EMAIL_WEBHOOK_SECRET ?? "test-webhook-secret";
 process.env.ZOHO_ENABLED = process.env.ZOHO_ENABLED ?? "false";
+process.env.WHATSAPP_ENABLED = process.env.WHATSAPP_ENABLED ?? "false";
+process.env.WHATSAPP_VERIFY_TOKEN = process.env.WHATSAPP_VERIFY_TOKEN ?? "test-whatsapp-verify";
 process.env.LOG_LEVEL = process.env.LOG_LEVEL ?? "silent";

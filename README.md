@@ -46,9 +46,19 @@ MVP implementation of the Nexus Northwest Functional Specification (v1.2). One N
 - Login page auto-shows provider buttons when keys are present
 - Every SSO sign-in is audited
 
+**WhatsApp Business (Cloud API)**
+- Direct messaging via Meta Cloud API, gated by `WHATSAPP_ENABLED=true`
+- Stub mode (default) records outgoing messages without contacting Meta — flows can be exercised end-to-end
+- Approved templates only (default `event_announcement`); template variables are member name, event title, date, location, RSVP-Yes URL — adjust to match your approved template
+- `WhatsAppMessage` table tracks every send with provider id (`wamid`), status (queued → sent → delivered → read or failed), and delivery error
+- `/api/webhooks/whatsapp` handles Meta's subscription handshake (`GET`), per-message status receipts (`POST`), and STOP / UNSUBSCRIBE keyword opt-outs (clears `whatsappConsent` + audits)
+- See `docs/decisions.md` for the recommended rollout
+
 **Operations**
 - `GET /api/health` — liveness + readiness (200 only when DB responds; 503 with diagnostics otherwise). Suitable for container orchestrators and uptime monitors
 - `/robots.txt` + `/sitemap.xml` — public site indexed; dashboard, API, and tokenised paths blocked
+
+**Product decisions** — see [`docs/decisions.md`](./docs/decisions.md) for the recommendations against spec §16 open questions (Zoho module, email provider, WhatsApp rollout, RSVP options, cancellation, mandatory fields, multi-region scaling)
 
 **Anti-abuse on sign-up**
 - Per-IP rate limit (5 attempts / 60 s)

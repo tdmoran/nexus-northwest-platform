@@ -7,7 +7,8 @@ import { sendEventAnnouncement } from "@/server/announcements";
 import { log } from "@/lib/logger";
 
 const bodySchema = z.object({
-  audience: z.enum(["all", "rsvp_yes"]).default("all")
+  audience: z.enum(["all", "rsvp_yes"]).default("all"),
+  channel: z.enum(["EMAIL", "WHATSAPP"]).default("EMAIL")
 });
 
 export async function POST(req: Request, { params }: { params: { id: string } }) {
@@ -32,6 +33,7 @@ export async function POST(req: Request, { params }: { params: { id: string } })
     const result = await sendEventAnnouncement({
       eventId: params.id,
       audience: parsed.data.audience,
+      channel: parsed.data.channel,
       actorId: session.user.id
     });
     return NextResponse.json(result);

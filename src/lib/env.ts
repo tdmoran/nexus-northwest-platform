@@ -27,7 +27,14 @@ const schema = z.object({
   ZOHO_API_DOMAIN: z.string().url().default("https://www.zohoapis.eu"),
   ZOHO_MODULE: z.string().default("Leads"),
   WHATSAPP_BROADCAST_GROUP_URL: z.string().url().optional().or(z.literal("")).default(""),
-  WHATSAPP_DISCUSSION_GROUP_URL: z.string().url().optional().or(z.literal("")).default("")
+  WHATSAPP_DISCUSSION_GROUP_URL: z.string().url().optional().or(z.literal("")).default(""),
+  WHATSAPP_ENABLED: z.string().default("false"),
+  WHATSAPP_PHONE_NUMBER_ID: z.string().optional().default(""),
+  WHATSAPP_ACCESS_TOKEN: z.string().optional().default(""),
+  WHATSAPP_VERIFY_TOKEN: z.string().min(8).default("dev-whatsapp-verify-token"),
+  WHATSAPP_TEMPLATE_NAME: z.string().default("event_announcement"),
+  WHATSAPP_TEMPLATE_LANGUAGE: z.string().default("en"),
+  WHATSAPP_GRAPH_VERSION: z.string().default("v20.0")
 });
 
 const parsed = schema.safeParse(process.env);
@@ -41,5 +48,6 @@ if (!parsed.success) {
 
 export const env = {
   ...parsed.data,
-  ZOHO_ENABLED: parsed.data.ZOHO_ENABLED === "true"
+  ZOHO_ENABLED: parsed.data.ZOHO_ENABLED === "true",
+  WHATSAPP_ENABLED: parsed.data.WHATSAPP_ENABLED === "true"
 } as const;

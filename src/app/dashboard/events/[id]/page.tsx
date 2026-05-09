@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { prisma } from "@/lib/db";
 import { requireUser } from "@/lib/session";
 import { can } from "@/lib/rbac";
+import { env } from "@/lib/env";
 import { AnnounceForm } from "./AnnounceForm";
 
 export default async function EventDetailPage({ params }: { params: { id: string } }) {
@@ -68,7 +69,7 @@ export default async function EventDetailPage({ params }: { params: { id: string
             Sends to all email-consenting members (or RSVP-Yes only). Each recipient gets a unique
             tokenised RSVP link.
           </p>
-          <AnnounceForm eventId={event.id} />
+          <AnnounceForm eventId={event.id} whatsappEnabled={env.WHATSAPP_ENABLED} />
         </section>
       )}
 

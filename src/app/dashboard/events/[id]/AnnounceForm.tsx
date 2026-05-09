@@ -4,16 +4,26 @@ import { useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/Button";
 
-export function AnnounceForm({ eventId }: { eventId: string }) {
+export function AnnounceForm({
+  eventId,
+  whatsappEnabled
+}: {
+  eventId: string;
+  whatsappEnabled: boolean;
+}) {
   const router = useRouter();
   const [audience, setAudience] = useState<"all" | "rsvp_yes">("all");
+  const [channel, setChannel] = useState<"EMAIL" | "WHATSAPP">("EMAIL");
   const [submitting, setSubmitting] = useState(false);
   const [result, setResult] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
-    if (!confirm(`Send to ${audience === "all" ? "all members" : "RSVP-Yes only"}?`)) return;
+    const channelLabel = channel === "EMAIL" ? "email" : "WhatsApp";
+    const audienceLabel = audience === "all" ? "all consenting members" : "RSVP-Yes only";
+    if (!confirm(`Send via ${channelLabel} to ${audienceLabel}?`)) return;
+
     setSubmitting(true);
     setError(null);
     setResult(null);
@@ -21,7 +31,7 @@ export function AnnounceForm({ eventId }: { eventId: string }) {
       const res = await fetch(`/api/events/${eventId}/announce`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ audience })
+        body: JSON.stringify({ audience, channel })
       });
       if (!res.ok) {
         const data = (await res.json().catch(() => ({}))) as { error?: string };
@@ -43,11 +53,21 @@ export function AnnounceForm({ eventId }: { eventId: string }) {
   return (
     <form onSubmit={onSubmit} className="mt-3 flex flex-wrap items-center gap-3">
       <select
+        value={channel}
+        onChange={(e) => setChannel(e.target.value as "EMAIL" | "WHATSAPP")}
+        className="rounded-md border border-slate-300 px-3 py-2 text-sm"
+      >
+        <option value="EMAIL">Email</option>
+        <option value="WHATSAPP" disabled={!whatsappEnabled}>
+          WhatsApp{!whatsappEnabled ? " (disabled — set WHATSAPP_ENABLED=true)" : ""}
+        </option>
+      </select>
+      <select
         value={audience}
         onChange={(e) => setAudience(e.target.value as "all" | "rsvp_yes")}
         className="rounded-md border border-slate-300 px-3 py-2 text-sm"
       >
-        <option value="all">All members (email consenting)</option>
+        <option value="all">All consenting members</option>
         <option value="rsvp_yes">RSVP &mdash; Yes only</option>
       </select>
       <Button type="submit" disabled={submitting}>

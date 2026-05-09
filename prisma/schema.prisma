@@ -86,6 +86,7 @@ model Member {
   tokens              Token[]
   audit               AuditLog[]
   zohoFailures        ZohoSyncFailure[]
+  whatsappMessages    WhatsAppMessage[]
 
   @@index([createdAt])
   @@index([utmSource])
@@ -253,6 +254,40 @@ model ZohoSyncFailure {
 
   @@unique([memberId])
   @@index([resolvedAt])
+}
+
+// ----------------------------- WhatsApp messages ---------------------------
+//
+// Logs every WhatsApp Business Cloud API send and delivery receipt. Keyed by
+// the provider's wamid for idempotency on inbound webhook events.
+
+enum WhatsAppMessageStatus {
+  QUEUED
+  SENT
+  DELIVERED
+  READ
+  FAILED
+}
+
+model WhatsAppMessage {
+  id           String                @id @default(cuid())
+  memberId     String
+  member       Member                @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  toPhone      String
+  templateName String?
+  variables    Json?
+  providerId   String?               @unique         // wamid from Meta
+  status       WhatsAppMessageStatus @default(QUEUED)
+  errorCode    String?
+  errorMessage String?
+  sentAt       DateTime?
+  deliveredAt  DateTime?
+  readAt       DateTime?
+  createdAt    DateTime              @default(now())
+  updatedAt    DateTime              @updatedAt
+
+  @@index([memberId])
+  @@index([status])
 }
 
 // ----------------------------- Reminders -----------------------------------

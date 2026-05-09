@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import { prisma } from "@/lib/db";
 import { lookupToken } from "@/lib/tokens";
 import { PreferencesForm } from "./PreferencesForm";
+import { GdprActions } from "./GdprActions";
 
 export default async function PreferencesPage({ params }: { params: { token: string } }) {
   const token = decodeURIComponent(params.token);
@@ -40,6 +41,12 @@ export default async function PreferencesPage({ params }: { params: { token: str
         <code className="mt-2 block break-all rounded-md bg-slate-50 px-3 py-2 font-mono text-xs text-slate-700">
           {calendarUrl}
         </code>
+
+        <hr className="my-6 border-slate-200" />
+        <GdprActions
+          token={token}
+          deletionRequestedAt={member.deletionRequestedAt?.toISOString() ?? null}
+        />
       </div>
     </main>
   );

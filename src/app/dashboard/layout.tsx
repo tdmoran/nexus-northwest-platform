@@ -8,11 +8,14 @@ import { LogoutButton } from "./LogoutButton";
 const BASE_NAV = [
   { href: "/dashboard", label: "Overview" },
   { href: "/dashboard/events", label: "Events" },
+  { href: "/dashboard/series", label: "Series" },
   { href: "/dashboard/members", label: "Members" },
+  { href: "/dashboard/tags", label: "Tags" },
   { href: "/dashboard/actions", label: "Actions" },
   { href: "/dashboard/reports", label: "Reports" },
   { href: "/dashboard/qr", label: "QR + links" },
   { href: "/dashboard/audit", label: "Audit log" },
+  { href: "/dashboard/compliance", label: "Compliance" },
   { href: "/dashboard/settings", label: "Settings" }
 ];
 

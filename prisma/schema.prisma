@@ -34,6 +34,7 @@ model OrganiserUser {
   lastLoginAt   DateTime?
 
   events        Event[]        @relation("EventCreator")
+  series        EventSeries[]  @relation("SeriesCreator")
   announcements Announcement[] @relation("AnnouncementSender")
   actionsOwned  ActionItem[]   @relation("ActionOwner")
   audit         AuditLog[]
@@ -93,6 +94,10 @@ model Member {
   notes               String?
   tags                String[] @default([])
   addedById           String?
+  // GDPR: soft-delete with grace window. deletedAt is set when the grace
+  // period expires and a hard-delete worker scrubs PII on the next pass.
+  deletionRequestedAt DateTime?
+  deletedAt           DateTime?
   addedBy             OrganiserUser? @relation("MemberAddedBy", fields: [addedById], references: [id])
   createdAt           DateTime @default(now())
   updatedAt           DateTime @updatedAt
@@ -124,6 +129,8 @@ model Event {
   reminderOffsets Int[]    @default([10080, 1440, 120])  // minutes before start: 7d, 24h, 2h
   reminderAudience String  @default("all")               // "all" | "rsvp_yes"
   tags            String[] @default([])
+  seriesId        String?
+  series          EventSeries? @relation(fields: [seriesId], references: [id], onDelete: SetNull)
   createdById     String
   createdBy       OrganiserUser @relation("EventCreator", fields: [createdById], references: [id])
   createdAt       DateTime @default(now())
@@ -135,6 +142,40 @@ model Event {
   reminders       Reminder[]
 
   @@index([startsAt])
+  @@index([seriesId])
+}
+
+// A recurring event template that materialises new Event rows on a cadence.
+enum SeriesCadence {
+  WEEKLY
+  BIWEEKLY
+  MONTHLY
+}
+
+model EventSeries {
+  id              String        @id @default(cuid())
+  title           String
+  description     String
+  cadence         SeriesCadence
+  startTimeLocal  String        // "HH:MM"
+  durationMinutes Int           @default(120)
+  timezone        String        @default("Europe/Dublin")
+  location        String
+  onlineUrl       String?
+  heroImageUrl    String?
+  capacity        Int?
+  reminderOffsets Int[]         @default([10080, 1440, 120])
+  reminderAudience String       @default("all")
+  tags            String[]      @default([])
+  active          Boolean       @default(true)
+  startsOn        DateTime
+  lookaheadCount  Int           @default(2)
+  createdById     String
+  createdBy       OrganiserUser @relation("SeriesCreator", fields: [createdById], references: [id])
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  events          Event[]
 }
 
 enum RSVPStatus {

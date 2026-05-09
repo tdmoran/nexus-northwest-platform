@@ -19,6 +19,16 @@ export default async function EventDetailPage({ params }: { params: { id: string
   });
   if (!event) notFound();
 
+  const tagRows = await prisma.$queryRaw<Array<{ tag: string; count: bigint }>>`
+    SELECT unnest("tags") AS tag, COUNT(*)::bigint AS count
+    FROM "Member"
+    WHERE "deletedAt" IS NULL AND "deletionRequestedAt" IS NULL
+    GROUP BY tag
+    ORDER BY count DESC, tag ASC
+    LIMIT 50
+  `;
+  const availableTags = tagRows.map((r) => ({ tag: r.tag, count: Number(r.count) }));
+
   const yes = event.rsvps.filter((r) => r.status === "YES").length;
   const no = event.rsvps.filter((r) => r.status === "NO").length;
   const maybe = event.rsvps.filter((r) => r.status === "MAYBE").length;
@@ -77,7 +87,11 @@ export default async function EventDetailPage({ params }: { params: { id: string
             Sends to all email-consenting members (or RSVP-Yes only). Each recipient gets a unique
             tokenised RSVP link.
           </p>
-          <AnnounceForm eventId={event.id} whatsappEnabled={env.WHATSAPP_ENABLED} />
+          <AnnounceForm
+            eventId={event.id}
+            whatsappEnabled={env.WHATSAPP_ENABLED}
+            availableTags={availableTags}
+          />
         </section>
       )}
 

@@ -1,13 +1,9 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "crons": [
-    {
-      "path": "/api/cron/reminders",
-      "schedule": "*/10 * * * *"
-    },
-    {
-      "path": "/api/cron/scheduled-announcements",
-      "schedule": "*/2 * * * *"
-    }
+    { "path": "/api/cron/reminders", "schedule": "*/10 * * * *" },
+    { "path": "/api/cron/scheduled-announcements", "schedule": "*/2 * * * *" },
+    { "path": "/api/cron/gdpr", "schedule": "0 3 * * *" },
+    { "path": "/api/cron/event-series", "schedule": "0 */6 * * *" }
   ]
 }

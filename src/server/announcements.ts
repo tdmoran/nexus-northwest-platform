@@ -10,9 +10,12 @@ import { log } from "@/lib/logger";
 import { env } from "@/lib/env";
 import { inngest } from "@/inngest/client";
 
+// Audience: "all" | "rsvp_yes" | "tag:<name>"
+export type AudienceSpec = "all" | "rsvp_yes" | `tag:${string}`;
+
 export interface SendAnnouncementInput {
   eventId: string;
-  audience: "all" | "rsvp_yes";
+  audience: AudienceSpec;
   channel: Channel;
   actorId: string;
   scheduledFor?: Date | null;   // when set, the announcement is queued for later
@@ -106,7 +109,7 @@ export async function dispatchDueScheduledAnnouncements(): Promise<{ fired: numb
   for (const a of due) {
     if (!a.eventId) continue;
     // Re-resolve recipients now so we honour any opt-outs since scheduling.
-    const recipients = await selectRecipients(a.eventId, a.channel, (a.audienceTag ?? "all") as "all" | "rsvp_yes");
+    const recipients = await selectRecipients(a.eventId, a.channel, (a.audienceTag ?? "all") as AudienceSpec);
 
     await prisma.announcement.update({
       where: { id: a.id },
@@ -239,14 +242,26 @@ export async function sendEventAnnouncement(input: SendAnnouncementInput): Promi
 async function selectRecipients(
   eventId: string,
   channel: Channel,
-  audience: "all" | "rsvp_yes"
+  audience: AudienceSpec
 ): Promise<Member[]> {
-  const audienceFilter =
-    audience === "rsvp_yes" ? { rsvps: { some: { eventId, status: "YES" as const } } } : {};
+  let audienceFilter: Record<string, unknown> = {};
+  if (audience === "rsvp_yes") {
+    audienceFilter = { rsvps: { some: { eventId, status: "YES" as const } } };
+  } else if (audience.startsWith("tag:")) {
+    const tag = audience.slice("tag:".length);
+    audienceFilter = { tags: { has: tag } };
+  }
 
   if (channel === Channel.EMAIL) {
     return prisma.member.findMany({
-      where: { emailConsent: true, emailOptOutAt: null, emailBouncedAt: null, ...audienceFilter }
+      where: {
+        emailConsent: true,
+        emailOptOutAt: null,
+        emailBouncedAt: null,
+        deletionRequestedAt: null,
+        deletedAt: null,
+        ...audienceFilter
+      }
     });
   }
   // WhatsApp: must have consented + given a number.
@@ -254,6 +269,8 @@ async function selectRecipients(
     where: {
       whatsappConsent: true,
       whatsappOptOutAt: null,
+      deletionRequestedAt: null,
+      deletedAt: null,
       OR: [{ whatsappNumber: { not: null } }, { phone: { not: null } }],
       ...audienceFilter
     }

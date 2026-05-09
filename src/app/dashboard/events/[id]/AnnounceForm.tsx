@@ -6,13 +6,15 @@ import { Button } from "@/components/ui/Button";
 
 export function AnnounceForm({
   eventId,
-  whatsappEnabled
+  whatsappEnabled,
+  availableTags
 }: {
   eventId: string;
   whatsappEnabled: boolean;
+  availableTags: Array<{ tag: string; count: number }>;
 }) {
   const router = useRouter();
-  const [audience, setAudience] = useState<"all" | "rsvp_yes">("all");
+  const [audience, setAudience] = useState<string>("all");
   const [channel, setChannel] = useState<"EMAIL" | "WHATSAPP">("EMAIL");
   const [scheduledFor, setScheduledFor] = useState<string>("");
   const [submitting, setSubmitting] = useState(false);
@@ -23,7 +25,12 @@ export function AnnounceForm({
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
     const channelLabel = channel === "EMAIL" ? "email" : "WhatsApp";
-    const audienceLabel = audience === "all" ? "all consenting members" : "RSVP-Yes only";
+    const audienceLabel =
+      audience === "all"
+        ? "all consenting members"
+        : audience === "rsvp_yes"
+          ? "RSVP-Yes only"
+          : `tagged "${audience.slice("tag:".length)}"`;
     const when = scheduledFor ? `at ${new Date(scheduledFor).toLocaleString()}` : "now";
     if (!confirm(`Send via ${channelLabel} to ${audienceLabel} ${when}?`)) return;
 
@@ -94,11 +101,20 @@ export function AnnounceForm({
           <span className="font-semibold uppercase tracking-wide">Audience</span>
           <select
             value={audience}
-            onChange={(e) => setAudience(e.target.value as "all" | "rsvp_yes")}
+            onChange={(e) => setAudience(e.target.value)}
             className="mt-1 rounded-md border border-slate-300 px-3 py-2 text-sm"
           >
             <option value="all">All consenting members</option>
             <option value="rsvp_yes">RSVP &mdash; Yes only</option>
+            {availableTags.length > 0 && (
+              <optgroup label="Tagged segments">
+                {availableTags.map((t) => (
+                  <option key={t.tag} value={`tag:${t.tag}`}>
+                    Tag: {t.tag} ({t.count})
+                  </option>
+                ))}
+              </optgroup>
+            )}
           </select>
         </label>
         <label className="flex flex-col text-xs text-slate-600">

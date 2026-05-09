@@ -19,6 +19,8 @@ import { issueToken } from "@/lib/tokens";
 import { rsvpUrl, preferencesUrl, unsubscribeUrl } from "@/lib/urls";
 import { dispatchDueReminders } from "@/server/reminders";
 import { dispatchDueScheduledAnnouncements } from "@/server/announcements";
+import { processExpiredDeletions } from "@/server/gdpr";
+import { materialiseSeriesOccurrences } from "@/server/event-series";
 import { AnnouncementStatus } from "@prisma/client";
 
 // ----------------------------- Welcome email --------------------------------
@@ -151,6 +153,22 @@ export const scheduledAnnouncementsCron = inngest.createFunction(
   { cron: "*/2 * * * *" }, // every 2 minutes — scheduling granularity
   async ({ step }) => {
     return step.run("dispatch-due", () => dispatchDueScheduledAnnouncements());
+  }
+);
+
+export const gdprDeletionCron = inngest.createFunction(
+  { id: "gdpr-deletion-cron", retries: 3 },
+  { cron: "0 3 * * *" }, // daily 03:00 — low-traffic window
+  async ({ step }) => {
+    return step.run("process-expired", () => processExpiredDeletions());
+  }
+);
+
+export const eventSeriesCron = inngest.createFunction(
+  { id: "event-series-cron", retries: 3 },
+  { cron: "0 */6 * * *" }, // every 6 hours
+  async ({ step }) => {
+    return step.run("materialise", () => materialiseSeriesOccurrences());
   }
 );
 
@@ -301,5 +319,7 @@ export const allFunctions = [
   syncMemberToZoho,
   remindersCron,
   scheduledAnnouncementsCron,
+  gdprDeletionCron,
+  eventSeriesCron,
   dispatchAnnouncement
 ];

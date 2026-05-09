@@ -25,6 +25,21 @@ MVP implementation of the Nexus Northwest Functional Specification (v1.2). One N
 - Users page (Admin+ only) — invite, role-change, enable/disable, password-reset for manageable roles
 - Settings (integration status + organiser users)
 
+**GDPR data rights**
+- Member-side: data export (JSON download) and account-deletion request from `/preferences/[token]`
+- Soft-delete with 30-day grace; hard-delete worker scrubs PII automatically (Inngest cron + Vercel cron `/api/cron/gdpr` daily at 03:00)
+- Organiser-side: `/dashboard/compliance` lists pending requests, flags overdue ones, shows completion count
+
+**Tag segments + audience picker**
+- `/dashboard/tags` lists every tag with member count + share + browse link
+- Members list has bulk-tag (add/remove) controls behind a sticky action bar
+- Announcement audience picker now supports `all` | `rsvp_yes` | any tag — pre-populated with discovered tag list per event
+
+**Recurring event series**
+- `/dashboard/series` (list + new + detail). Cadence: weekly / biweekly / monthly with configurable look-ahead
+- Inngest cron + `/api/cron/event-series` materialise upcoming `Event` rows automatically; "Generate now" button for immediate fill
+- Generated events behave like normal events — RSVP, reminders, announcements all work
+
 **Capacity waitlist + auto-promotion**
 - When `Event.capacity` is set and full, RSVP-Yes is auto-routed to `WAITLISTED` with a position number shown to the member
 - When a YES is cancelled (or flipped to NO/MAYBE), the oldest waitlister is auto-promoted, marked `promotedAt`, and emailed

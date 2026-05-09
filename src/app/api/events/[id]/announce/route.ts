@@ -3,12 +3,13 @@ import { z } from "zod";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { can } from "@/lib/rbac";
-import { sendEventAnnouncement } from "@/server/announcements";
+import { sendEventAnnouncement, scheduleEventAnnouncement } from "@/server/announcements";
 import { log } from "@/lib/logger";
 
 const bodySchema = z.object({
   audience: z.enum(["all", "rsvp_yes"]).default("all"),
-  channel: z.enum(["EMAIL", "WHATSAPP"]).default("EMAIL")
+  channel: z.enum(["EMAIL", "WHATSAPP"]).default("EMAIL"),
+  scheduledFor: z.coerce.date().optional().nullable()
 });
 
 export async function POST(req: Request, { params }: { params: { id: string } }) {
@@ -30,6 +31,17 @@ export async function POST(req: Request, { params }: { params: { id: string } })
   }
 
   try {
+    if (parsed.data.scheduledFor) {
+      const result = await scheduleEventAnnouncement({
+        eventId: params.id,
+        audience: parsed.data.audience,
+        channel: parsed.data.channel,
+        actorId: session.user.id,
+        scheduledFor: parsed.data.scheduledFor
+      });
+      return NextResponse.json({ ...result, scheduled: true });
+    }
+
     const result = await sendEventAnnouncement({
       eventId: params.id,
       audience: parsed.data.audience,

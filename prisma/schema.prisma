@@ -142,23 +142,27 @@ enum RSVPStatus {
   NO
   MAYBE
   CANCELLED
+  WAITLISTED
 }
 
 model RSVP {
-  id          String     @id @default(cuid())
-  eventId     String
-  memberId    String
-  status      RSVPStatus
-  channel     String?     // how the RSVP came in: email/whatsapp/web/etc
-  attendedAt  DateTime?   // populated at check-in
-  noShow      Boolean    @default(false)  // organiser flag for didn't-show
-  createdAt   DateTime   @default(now())
-  updatedAt   DateTime   @updatedAt
-  event       Event      @relation(fields: [eventId], references: [id], onDelete: Cascade)
-  member      Member     @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  id              String     @id @default(cuid())
+  eventId         String
+  memberId        String
+  status          RSVPStatus
+  channel         String?     // how the RSVP came in: email/whatsapp/web/etc
+  attendedAt      DateTime?   // populated at check-in
+  noShow          Boolean    @default(false)  // organiser flag for didn't-show
+  waitlistedAt    DateTime?   // set when status=WAITLISTED so order is deterministic
+  promotedAt      DateTime?   // set when promoted from WAITLISTED → YES
+  createdAt       DateTime   @default(now())
+  updatedAt       DateTime   @updatedAt
+  event           Event      @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  member          Member     @relation(fields: [memberId], references: [id], onDelete: Cascade)
 
   @@unique([eventId, memberId])
   @@index([status])
+  @@index([eventId, status, waitlistedAt])
 }
 
 // ----------------------------- Announcements --------------------------------
@@ -170,9 +174,11 @@ enum Channel {
 
 enum AnnouncementStatus {
   DRAFT
+  SCHEDULED
   QUEUED
   SENT
   FAILED
+  CANCELLED
 }
 
 model Announcement {
@@ -184,6 +190,7 @@ model Announcement {
   body         String
   audienceTag  String?            // freeform: "all", "rsvp_yes", "tag:speakers"
   status       AnnouncementStatus @default(DRAFT)
+  scheduledFor DateTime?          // populated when status=SCHEDULED
   sentAt       DateTime?
   sentById     String?
   sentBy       OrganiserUser?     @relation("AnnouncementSender", fields: [sentById], references: [id])
@@ -191,6 +198,8 @@ model Announcement {
   meta         Json?
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
+
+  @@index([status, scheduledFor])
 }
 
 // ----------------------------- Actions --------------------------------------

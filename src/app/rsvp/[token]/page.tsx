@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import { prisma } from "@/lib/db";
 import { lookupToken, consumeToken } from "@/lib/tokens";
 import { audit } from "@/lib/audit";
+import { applyRsvpDecision } from "@/server/waitlist";
 import { RSVPStatus } from "@prisma/client";
 
 interface Props {
@@ -26,33 +27,22 @@ export default async function RsvpPage({ params, searchParams }: Props) {
   if (!event || !member) notFound();
 
   const responseRaw = (searchParams.response ?? "yes").toLowerCase();
-  const status = responseToStatus[responseRaw] ?? RSVPStatus.YES;
+  const requested = responseToStatus[responseRaw] ?? RSVPStatus.YES;
 
-  // Token is still valid (consumeToken on RSVP returns it without burning).
+  // RSVP tokens stay valid — re-clicking works to flip the decision.
   await consumeToken(tok, "RSVP");
 
-  // Capacity check (only for YES)
-  let atCapacity = false;
-  if (status === RSVPStatus.YES && event.capacity) {
-    const yesCount = await prisma.rSVP.count({
-      where: { eventId: event.id, status: RSVPStatus.YES, NOT: { memberId: member.id } }
-    });
-    if (yesCount >= event.capacity) atCapacity = true;
-  }
+  const { status: finalStatus } = await applyRsvpDecision(event, member, {
+    status: requested,
+    channel: "email"
+  });
 
-  if (!atCapacity) {
-    await prisma.rSVP.upsert({
-      where: { eventId_memberId: { eventId: event.id, memberId: member.id } },
-      update: { status, channel: "email" },
-      create: { eventId: event.id, memberId: member.id, status, channel: "email" }
-    });
-    await audit({
-      action: "rsvp.recorded",
-      memberId: member.id,
-      channel: "email",
-      meta: { eventId: event.id, status }
-    });
-  }
+  await audit({
+    action: "rsvp.recorded",
+    memberId: member.id,
+    channel: "email",
+    meta: { eventId: event.id, requested, finalStatus }
+  });
 
   const dateStr = event.startsAt.toLocaleString("en-IE", {
     dateStyle: "full",
@@ -60,21 +50,39 @@ export default async function RsvpPage({ params, searchParams }: Props) {
     timeZone: event.timezone
   });
 
+  const waitlistPosition =
+    finalStatus === RSVPStatus.WAITLISTED
+      ? await prisma.rSVP.count({
+          where: {
+            eventId: event.id,
+            status: RSVPStatus.WAITLISTED,
+            waitlistedAt: { lte: new Date() }
+          }
+        })
+      : null;
+
   return (
     <main id="main" className="mx-auto max-w-xl px-4 py-16">
       <div className="rounded-2xl bg-white p-8 shadow-sm ring-1 ring-slate-200">
-        {atCapacity ? (
+        {finalStatus === RSVPStatus.WAITLISTED ? (
           <>
-            <h1 className="text-2xl font-bold text-slate-900">Event is at capacity</h1>
+            <h1 className="text-2xl font-bold text-slate-900">
+              You&rsquo;re on the waitlist, {member.name}.
+            </h1>
             <p className="mt-3 text-slate-600">
-              Sorry {member.name}, this event is fully booked. We&rsquo;ve noted your interest;
-              we&rsquo;ll let you know if a spot opens up.
+              <strong>{event.title}</strong> is currently at capacity. We&rsquo;ll email you
+              automatically if a spot opens up — no further action needed.
+              {waitlistPosition && waitlistPosition > 0 && (
+                <>
+                  {" "}You&rsquo;re position <strong>#{waitlistPosition}</strong> on the waitlist.
+                </>
+              )}
             </p>
           </>
         ) : (
           <>
             <h1 className="text-2xl font-bold text-slate-900">
-              {labelFor(status)} &mdash; thanks {member.name}!
+              {labelFor(finalStatus)} &mdash; thanks {member.name}!
             </h1>
             <p className="mt-3 text-slate-700">
               Your response has been recorded for <strong>{event.title}</strong>.
@@ -87,7 +95,7 @@ export default async function RsvpPage({ params, searchParams }: Props) {
                 <strong>Where:</strong> {event.location}
               </li>
             </ul>
-            {status === RSVPStatus.YES && (
+            {finalStatus === RSVPStatus.YES && (
               <div className="mt-6 flex flex-wrap gap-3">
                 <a
                   href={`/api/events/${event.id}/calendar`}
@@ -121,5 +129,7 @@ function labelFor(status: RSVPStatus): string {
       return "Got it — tentative";
     case RSVPStatus.CANCELLED:
       return "RSVP cancelled";
+    case RSVPStatus.WAITLISTED:
+      return "Waitlisted";
   }
 }

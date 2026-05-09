@@ -6,7 +6,7 @@ export default function robots(): MetadataRoute.Robots {
     rules: [
       {
         userAgent: "*",
-        allow: ["/", "/privacy"],
+        allow: ["/", "/privacy", "/events"],
         // Tokenised links and the organiser dashboard must not be indexed.
         disallow: [
           "/dashboard/",

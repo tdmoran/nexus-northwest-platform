@@ -15,6 +15,141 @@ export interface SendAnnouncementInput {
   audience: "all" | "rsvp_yes";
   channel: Channel;
   actorId: string;
+  scheduledFor?: Date | null;   // when set, the announcement is queued for later
+}
+
+/**
+ * Schedules an announcement for future dispatch. Records the recipient count
+ * at scheduling time as an estimate; the actual recipients are re-selected at
+ * fire time so opt-outs and new sign-ups in the interim are honoured.
+ */
+export async function scheduleEventAnnouncement(input: SendAnnouncementInput & {
+  scheduledFor: Date;
+}): Promise<{ announcementId: string; estimatedRecipients: number }> {
+  const event = await prisma.event.findUniqueOrThrow({ where: { id: input.eventId } });
+  if (input.scheduledFor.getTime() <= Date.now()) {
+    throw new Error("Scheduled time must be in the future");
+  }
+  if (event.startsAt.getTime() < input.scheduledFor.getTime()) {
+    throw new Error("Cannot schedule an announcement after the event has started");
+  }
+
+  const recipients = await selectRecipients(event.id, input.channel, input.audience);
+
+  const announcement = await prisma.announcement.create({
+    data: {
+      eventId: event.id,
+      channel: input.channel,
+      subject: event.title,
+      body: event.description,
+      audienceTag: input.audience,
+      sentById: input.actorId,
+      status: AnnouncementStatus.SCHEDULED,
+      scheduledFor: input.scheduledFor,
+      meta: { estimatedRecipients: recipients.length }
+    }
+  });
+
+  await audit({
+    action: "announcement.scheduled",
+    actorId: input.actorId,
+    channel: input.channel.toLowerCase(),
+    meta: {
+      announcementId: announcement.id,
+      eventId: event.id,
+      audience: input.audience,
+      scheduledFor: input.scheduledFor.toISOString(),
+      estimatedRecipients: recipients.length
+    }
+  });
+
+  return { announcementId: announcement.id, estimatedRecipients: recipients.length };
+}
+
+/**
+ * Cancels a SCHEDULED announcement. Returns true if cancelled, false if it
+ * had already moved past the SCHEDULED state.
+ */
+export async function cancelScheduledAnnouncement(
+  announcementId: string,
+  actorId: string
+): Promise<boolean> {
+  const result = await prisma.announcement.updateMany({
+    where: { id: announcementId, status: AnnouncementStatus.SCHEDULED },
+    data: { status: AnnouncementStatus.CANCELLED }
+  });
+  if (result.count > 0) {
+    await audit({
+      action: "announcement.cancelled",
+      actorId,
+      meta: { announcementId }
+    });
+    return true;
+  }
+  return false;
+}
+
+/**
+ * Fires every SCHEDULED announcement whose scheduledFor is in the past.
+ * Returns the count of announcements moved to QUEUED. Designed to be called
+ * by the Inngest cron or a Vercel Cron job.
+ */
+export async function dispatchDueScheduledAnnouncements(): Promise<{ fired: number }> {
+  const due = await prisma.announcement.findMany({
+    where: {
+      status: AnnouncementStatus.SCHEDULED,
+      scheduledFor: { lte: new Date() }
+    },
+    take: 50
+  });
+
+  for (const a of due) {
+    if (!a.eventId) continue;
+    // Re-resolve recipients now so we honour any opt-outs since scheduling.
+    const recipients = await selectRecipients(a.eventId, a.channel, (a.audienceTag ?? "all") as "all" | "rsvp_yes");
+
+    await prisma.announcement.update({
+      where: { id: a.id },
+      data: { status: AnnouncementStatus.QUEUED }
+    });
+
+    if (env.INNGEST_EVENT_KEY) {
+      await inngest.send({
+        name: "announcement/dispatch",
+        data: {
+          announcementId: a.id,
+          eventId: a.eventId,
+          memberIds: recipients.map((m) => m.id),
+          channel: a.channel,
+          actorId: a.sentById ?? "system"
+        }
+      });
+    } else {
+      // Synchronous fallback: deliver inline.
+      const ev = await prisma.event.findUniqueOrThrow({ where: { id: a.eventId } });
+      let sent = 0;
+      let failed = 0;
+      for (const m of recipients) {
+        const ok =
+          a.channel === Channel.EMAIL
+            ? await deliverEmail(m, ev, a.id, a.sentById ?? "system")
+            : await deliverWhatsApp(m, ev, a.id, a.sentById ?? "system");
+        if (ok) sent++;
+        else failed++;
+      }
+      await prisma.announcement.update({
+        where: { id: a.id },
+        data: {
+          status: failed === 0 ? AnnouncementStatus.SENT : AnnouncementStatus.FAILED,
+          sentAt: new Date(),
+          recipientCount: sent,
+          meta: { sent, failed, total: recipients.length }
+        }
+      });
+    }
+  }
+
+  return { fired: due.length };
 }
 
 export async function sendEventAnnouncement(input: SendAnnouncementInput): Promise<{

@@ -22,6 +22,7 @@ export default async function EventDetailPage({ params }: { params: { id: string
   const yes = event.rsvps.filter((r) => r.status === "YES").length;
   const no = event.rsvps.filter((r) => r.status === "NO").length;
   const maybe = event.rsvps.filter((r) => r.status === "MAYBE").length;
+  const waitlist = event.rsvps.filter((r) => r.status === "WAITLISTED").length;
 
   return (
     <div className="space-y-8">
@@ -55,12 +56,19 @@ export default async function EventDetailPage({ params }: { params: { id: string
         )}
       </header>
 
-      <section className="grid gap-4 sm:grid-cols-4">
+      <section className="grid gap-4 sm:grid-cols-5">
         <Stat label="Yes" value={yes} />
+        <Stat label="Waitlist" value={waitlist} />
         <Stat label="Maybe" value={maybe} />
         <Stat label="No" value={no} />
         <Stat label="Sends" value={event.announcements.length} />
       </section>
+      {event.capacity != null && (
+        <p className="-mt-4 text-xs text-slate-500">
+          Capacity {event.capacity}. {yes} confirmed
+          {waitlist > 0 && `, ${waitlist} on waitlist (auto-promoted as spots free up)`}.
+        </p>
+      )}
 
       {canSend && (
         <section className="rounded-xl bg-white p-6 ring-1 ring-slate-200">

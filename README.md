@@ -12,14 +12,27 @@ MVP implementation of the Nexus Northwest Functional Specification (v1.2). One N
 - `/unsubscribe/[token]` — one-click opt-out (single use)
 - `/api/events/[id]/calendar` — `.ics` download for the event
 
+**Public events page (`/events`)**
+- Public discovery of upcoming events with member counts and per-event `.ics` download
+- Indexed in `robots.txt` and `sitemap.xml`
+
 **Organiser dashboard** (under `/dashboard`, behind login)
 - Overview with member, event and action counts plus sign-up source breakdown
-- Events list, create + edit forms, and detail page with RSVP roster + announcement sender + per-event RSVP CSV export
-- Members search with consent badges and source attribution; CSV export; clickable detail page with notes/tags/speaker-prospect editing
+- Events list, create + edit forms, and detail page with RSVP roster + waitlist count + announcement sender (with HTML preview iframe + scheduled-send) + per-event RSVP CSV export
+- Members search with consent badges and source attribution; CSV import + export; clickable detail page with notes/tags/speaker-prospect editing
 - Actions module (tasks + speaker/contributor/theme prospects) with inline status + assignee updates and "mark complete"
 - Audit log (visible per RBAC)
 - Users page (Admin+ only) — invite, role-change, enable/disable, password-reset for manageable roles
 - Settings (integration status + organiser users)
+
+**Capacity waitlist + auto-promotion**
+- When `Event.capacity` is set and full, RSVP-Yes is auto-routed to `WAITLISTED` with a position number shown to the member
+- When a YES is cancelled (or flipped to NO/MAYBE), the oldest waitlister is auto-promoted, marked `promotedAt`, and emailed
+- Event detail page shows live confirmed + waitlist counts
+
+**Calendar subscription per member**
+- `/api/calendar/[token]` — per-member ICS feed (PREFERENCES token) listing every event they've RSVPed Yes to
+- Subscribable in Google Calendar, Apple Calendar, Outlook; URL surfaced on the preferences page
 
 **Reminders**
 - Cron-style endpoint `POST /api/cron/reminders` (or `GET`) protected by `Authorization: Bearer $CRON_SECRET`

@@ -18,6 +18,7 @@ import { welcomeEmail, announcementEmail } from "@/lib/templates";
 import { issueToken } from "@/lib/tokens";
 import { rsvpUrl, preferencesUrl, unsubscribeUrl } from "@/lib/urls";
 import { dispatchDueReminders } from "@/server/reminders";
+import { dispatchDueScheduledAnnouncements } from "@/server/announcements";
 import { AnnouncementStatus } from "@prisma/client";
 
 // ----------------------------- Welcome email --------------------------------
@@ -140,6 +141,16 @@ export const remindersCron = inngest.createFunction(
   { cron: "*/10 * * * *" },
   async ({ step }) => {
     return step.run("dispatch", () => dispatchDueReminders());
+  }
+);
+
+// ------------------------ Scheduled announcements cron ---------------------
+
+export const scheduledAnnouncementsCron = inngest.createFunction(
+  { id: "scheduled-announcements-cron", retries: 3 },
+  { cron: "*/2 * * * *" }, // every 2 minutes — scheduling granularity
+  async ({ step }) => {
+    return step.run("dispatch-due", () => dispatchDueScheduledAnnouncements());
   }
 );
 
@@ -289,5 +300,6 @@ export const allFunctions = [
   sendWelcomeEmail,
   syncMemberToZoho,
   remindersCron,
+  scheduledAnnouncementsCron,
   dispatchAnnouncement
 ];

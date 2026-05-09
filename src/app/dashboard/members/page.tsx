@@ -30,6 +30,12 @@ export default async function MembersPage({
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold text-slate-900">Members</h1>
         <div className="flex items-center gap-2">
+          <Link
+            href="/dashboard/members/import"
+            className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+          >
+            Import CSV
+          </Link>
           <a
             href="/api/exports/members"
             className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"

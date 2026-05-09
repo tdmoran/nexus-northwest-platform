@@ -6,7 +6,7 @@ export default function robots(): MetadataRoute.Robots {
     rules: [
       {
         userAgent: "*",
-        allow: ["/", "/privacy", "/events"],
+        allow: ["/", "/privacy", "/events", "/community"],
         // Tokenised links and the organiser dashboard must not be indexed.
         disallow: [
           "/dashboard/",
@@ -14,7 +14,9 @@ export default function robots(): MetadataRoute.Robots {
           "/login",
           "/preferences/",
           "/rsvp/",
-          "/unsubscribe/"
+          "/unsubscribe/",
+          "/survey/",
+          "/auth/"
         ]
       }
     ],

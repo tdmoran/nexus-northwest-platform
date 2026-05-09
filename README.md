@@ -25,6 +25,28 @@ MVP implementation of the Nexus Northwest Functional Specification (v1.2). One N
 - Users page (Admin+ only) — invite, role-change, enable/disable, password-reset for manageable roles
 - Settings (integration status + organiser users)
 
+**Post-event surveys**
+- Per event: enable/pause from `/dashboard/events/[id]/survey` with default questions (rating, highlights, improvements)
+- Hourly cron auto-emails every RSVP-Yes member 24h after the event ends with a tokenised one-click response link
+- Responses stored in `EventSurveyResponse` (one per member); organiser viewer shows distribution per rating question + raw text answers
+
+**Public opt-in member directory (`/community`)**
+- Members opt in from their preferences page with optional headline + bio
+- Public, indexed page; non-listed members are never exposed
+- Soft-deleted and pending-deletion members are excluded automatically
+
+**Engagement scoring**
+- Per-member score from RSVP + attendance history (reward attendance, penalise no-shows)
+- Banded `active | engaged | occasional | lapsed` for at-a-glance segmentation
+- Surfaced on member detail; pure module covered by unit tests
+
+**Cohort retention**
+- Reports page now includes month-by-month sign-up cohorts with 30 / 60 / 90-day RSVP-conversion percentages
+
+**Member referrals (bring-a-friend)**
+- Per-member auto-generated `inviteSlug` surfaced on the preferences page as a copyable URL
+- Referral count visible to the member and to organisers on the member detail page
+
 **GDPR data rights**
 - Member-side: data export (JSON download) and account-deletion request from `/preferences/[token]`
 - Soft-delete with 30-day grace; hard-delete worker scrubs PII automatically (Inngest cron + Vercel cron `/api/cron/gdpr` daily at 03:00)

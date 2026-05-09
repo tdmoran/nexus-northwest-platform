@@ -3,6 +3,8 @@ import { prisma } from "@/lib/db";
 import { requireUser } from "@/lib/session";
 import { can } from "@/lib/rbac";
 import { audit } from "@/lib/audit";
+import { engagementScore, engagementBand } from "@/lib/engagement";
+import { countReferralsBySlug } from "@/server/invite";
 
 async function updateMember(formData: FormData) {
   "use server";
@@ -65,6 +67,15 @@ export default async function MemberDetailPage({
 
   const canEdit = can(actor.role, "members.edit");
   const canEditFull = can(actor.role, "members.edit.full");
+  const score = engagementScore(
+    member.rsvps.map((r) => ({
+      status: r.status,
+      attendedAt: r.attendedAt,
+      noShow: r.noShow
+    }))
+  );
+  const band = engagementBand(score.score);
+  const referralCount = member.inviteSlug ? await countReferralsBySlug(member.inviteSlug) : 0;
 
   return (
     <div className="space-y-8">
@@ -97,6 +108,28 @@ export default async function MemberDetailPage({
           value={member.whatsappConsent ? "yes" : "no"}
         />
         <Stat label="Channel" value={member.preferredChannel} />
+      </section>
+
+      <section className="rounded-xl bg-white p-5 ring-1 ring-slate-200">
+        <div className="flex items-center justify-between">
+          <h2 className="text-sm font-semibold text-slate-900">Engagement</h2>
+          <span
+            className={`rounded-full px-2 py-0.5 text-xs font-semibold ${bandColour(band)}`}
+          >
+            {band}
+          </span>
+        </div>
+        <p className="mt-1 text-xs text-slate-500">
+          Score {score.score} &middot; {score.rsvpCount} RSVPs &middot; {score.yesCount} Yes
+          &middot; {score.attendedCount} attended
+          {score.noShowCount > 0 && ` · ${score.noShowCount} no-show`}
+        </p>
+        <p className="mt-2 text-xs text-slate-500">
+          Friends introduced: <strong>{referralCount}</strong>
+          {member.inviteSlug && (
+            <> &middot; invite slug: <code className="font-mono">{member.inviteSlug}</code></>
+          )}
+        </p>
       </section>
 
       {canEdit && (
@@ -207,6 +240,19 @@ function Stat({ label, value }: { label: string; value: string }) {
       <p className="mt-1 text-sm font-semibold text-slate-900">{value}</p>
     </div>
   );
+}
+
+function bandColour(band: "active" | "engaged" | "occasional" | "lapsed"): string {
+  switch (band) {
+    case "active":
+      return "bg-emerald-50 text-emerald-700";
+    case "engaged":
+      return "bg-brand-50 text-brand-700";
+    case "occasional":
+      return "bg-amber-50 text-amber-700";
+    case "lapsed":
+      return "bg-slate-100 text-slate-500";
+  }
 }
 
 function Field(props: React.InputHTMLAttributes<HTMLInputElement> & { label: string }) {

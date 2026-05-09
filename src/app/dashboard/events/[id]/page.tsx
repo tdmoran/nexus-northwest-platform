@@ -49,12 +49,18 @@ export default async function EventDetailPage({ params }: { params: { id: string
           </p>
         </div>
         {can(user.role, "events.edit") && (
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2">
             <Link
               href={`/dashboard/events/${event.id}/check-in`}
               className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"
             >
               Check in
+            </Link>
+            <Link
+              href={`/dashboard/events/${event.id}/survey`}
+              className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+            >
+              Survey
             </Link>
             <Link
               href={`/dashboard/events/${event.id}/edit`}

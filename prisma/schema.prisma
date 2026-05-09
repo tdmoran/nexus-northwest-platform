@@ -35,6 +35,7 @@ model OrganiserUser {
 
   events        Event[]        @relation("EventCreator")
   series        EventSeries[]  @relation("SeriesCreator")
+  surveys       EventSurvey[]  @relation("SurveyCreator")
   announcements Announcement[] @relation("AnnouncementSender")
   actionsOwned  ActionItem[]   @relation("ActionOwner")
   audit         AuditLog[]
@@ -89,10 +90,15 @@ model Member {
   utmMedium           String?
   utmCampaign         String?
   utmContent          String?
-  referralCode        String?
+  referralCode        String?  // referral CODE THIS MEMBER WAS RECRUITED VIA (inbound)
+  inviteSlug          String?  @unique  // shareable code OUTBOUND (members can invite friends)
   speakerProspect     Boolean  @default(false)
   notes               String?
   tags                String[] @default([])
+  // Member-managed directory entry. Only listed publicly when publicProfile=true.
+  publicProfile       Boolean  @default(false)
+  headline            String?
+  bio                 String?
   addedById           String?
   // GDPR: soft-delete with grace window. deletedAt is set when the grace
   // period expires and a hard-delete worker scrubs PII on the next pass.
@@ -107,6 +113,7 @@ model Member {
   audit               AuditLog[]
   zohoFailures        ZohoSyncFailure[]
   whatsappMessages    WhatsAppMessage[]
+  surveyResponses     EventSurveyResponse[]
 
   @@index([createdAt])
   @@index([utmSource])
@@ -140,6 +147,7 @@ model Event {
   announcements   Announcement[]
   actions         ActionItem[]
   reminders       Reminder[]
+  survey          EventSurvey?
 
   @@index([startsAt])
   @@index([seriesId])
@@ -176,6 +184,40 @@ model EventSeries {
   updatedAt       DateTime      @updatedAt
 
   events          Event[]
+}
+
+// ----------------------------- Surveys -------------------------------------
+//
+// One survey per event (1:1). Questions are stored as a small JSON schema —
+// each entry has `id`, `prompt`, and `kind` ∈ { rating | text | choice }.
+// Responses store a parallel JSON map keyed by question id.
+
+model EventSurvey {
+  id          String        @id @default(cuid())
+  eventId     String        @unique
+  event       Event         @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  questions   Json          // [{ id, prompt, kind, choices? }]
+  active      Boolean       @default(true)
+  dispatchedAt DateTime?    // populated when the post-event email blast fires
+  createdById String
+  createdBy   OrganiserUser @relation("SurveyCreator", fields: [createdById], references: [id])
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  responses   EventSurveyResponse[]
+}
+
+model EventSurveyResponse {
+  id        String      @id @default(cuid())
+  surveyId  String
+  survey    EventSurvey @relation(fields: [surveyId], references: [id], onDelete: Cascade)
+  memberId  String
+  member    Member      @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  answers   Json        // { [questionId]: string | number }
+  submittedAt DateTime  @default(now())
+
+  @@unique([surveyId, memberId])
+  @@index([surveyId])
 }
 
 enum RSVPStatus {
@@ -285,6 +327,7 @@ enum TokenPurpose {
   RSVP
   PREFERENCES
   UNSUBSCRIBE
+  SURVEY_RESPONSE
 }
 
 model Token {

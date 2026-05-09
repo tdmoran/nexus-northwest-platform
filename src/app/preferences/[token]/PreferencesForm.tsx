@@ -12,6 +12,9 @@ interface Initial {
   whatsappNumber: string;
   whatsappConsent: boolean;
   emailConsent: boolean;
+  publicProfile: boolean;
+  headline: string;
+  bio: string;
 }
 
 export function PreferencesForm({ token, initial }: { token: string; initial: Initial }) {
@@ -95,6 +98,41 @@ export function PreferencesForm({ token, initial }: { token: string; initial: In
         />
         I&rsquo;d like to receive email event notifications.
       </label>
+
+      <fieldset className="space-y-2 rounded-lg border border-slate-200 p-3">
+        <legend className="px-1 text-xs font-semibold uppercase tracking-wide text-slate-500">
+          Public directory (opt-in)
+        </legend>
+        <label className="flex items-start gap-3 text-sm text-slate-700">
+          <input
+            type="checkbox"
+            checked={state.publicProfile}
+            onChange={(e) => setState({ ...state, publicProfile: e.target.checked })}
+          />
+          List me in the public member directory at /community
+        </label>
+        {state.publicProfile && (
+          <>
+            <Field
+              label="Headline (e.g. role, company)"
+              name="headline"
+              maxLength={140}
+              value={state.headline}
+              onChange={(e) => setState({ ...state, headline: e.target.value })}
+            />
+            <label className="block">
+              <span className="text-sm font-medium text-slate-700">Bio</span>
+              <textarea
+                rows={3}
+                maxLength={2000}
+                value={state.bio}
+                onChange={(e) => setState({ ...state, bio: e.target.value })}
+                className="mt-1 block w-full rounded-lg border border-slate-300 px-3 py-2 text-sm shadow-sm focus:border-brand-500 focus:ring-1 focus:ring-brand-500"
+              />
+            </label>
+          </>
+        )}
+      </fieldset>
 
       {error && (
         <p className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p>

@@ -50,7 +50,10 @@ export async function POST(req: Request, { params }: { params: { token: string }
       whatsappConsent: data.whatsappConsent ?? existing.whatsappConsent,
       whatsappConsentAt:
         data.whatsappConsent && !existing.whatsappConsent ? now : existing.whatsappConsentAt,
-      whatsappOptOutAt: data.whatsappConsent === false ? now : null
+      whatsappOptOutAt: data.whatsappConsent === false ? now : null,
+      publicProfile: data.publicProfile ?? existing.publicProfile,
+      headline: data.headline ?? existing.headline,
+      bio: data.bio ?? existing.bio
     }
   });
 

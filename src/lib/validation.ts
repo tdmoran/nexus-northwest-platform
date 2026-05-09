@@ -22,7 +22,10 @@ export const preferencesSchema = z.object({
   whatsappNumber: z.string().max(40).optional().or(z.literal("")),
   phone: z.string().max(40).optional().or(z.literal("")),
   whatsappConsent: z.boolean().optional(),
-  emailConsent: z.boolean().optional()
+  emailConsent: z.boolean().optional(),
+  publicProfile: z.boolean().optional(),
+  headline: z.string().max(140).optional().or(z.literal("")),
+  bio: z.string().max(2000).optional().or(z.literal(""))
 });
 
 export type PreferencesInput = z.infer<typeof preferencesSchema>;

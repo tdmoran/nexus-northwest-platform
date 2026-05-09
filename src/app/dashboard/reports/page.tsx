@@ -43,7 +43,7 @@ export default async function ReportsPage({
   const since =
     range === "90d" ? new Date(Date.now() - 90 * 24 * 60 * 60 * 1000) : new Date(0);
 
-  const [members, sourceRows, eventStats] = await Promise.all([
+  const [members, sourceRows, eventStats, cohortRows] = await Promise.all([
     prisma.member.findMany({
       where: { createdAt: { gte: since } },
       select: { createdAt: true, utmSource: true, referralCode: true }
@@ -62,7 +62,41 @@ export default async function ReportsPage({
       },
       orderBy: { startsAt: "desc" },
       take: 30
-    })
+    }),
+    // Cohort retention: per sign-up month, what fraction RSVPed within 30/60/90 days?
+    prisma.$queryRaw<
+      Array<{ cohort: string; size: bigint; rsvped30: bigint; rsvped60: bigint; rsvped90: bigint }>
+    >`
+      SELECT
+        to_char(date_trunc('month', m."createdAt"), 'YYYY-MM') AS cohort,
+        COUNT(*)::bigint AS size,
+        COUNT(*) FILTER (
+          WHERE EXISTS (
+            SELECT 1 FROM "RSVP" r
+            WHERE r."memberId" = m.id
+              AND r."createdAt" <= m."createdAt" + INTERVAL '30 days'
+          )
+        )::bigint AS rsvped30,
+        COUNT(*) FILTER (
+          WHERE EXISTS (
+            SELECT 1 FROM "RSVP" r
+            WHERE r."memberId" = m.id
+              AND r."createdAt" <= m."createdAt" + INTERVAL '60 days'
+          )
+        )::bigint AS rsvped60,
+        COUNT(*) FILTER (
+          WHERE EXISTS (
+            SELECT 1 FROM "RSVP" r
+            WHERE r."memberId" = m.id
+              AND r."createdAt" <= m."createdAt" + INTERVAL '90 days'
+          )
+        )::bigint AS rsvped90
+      FROM "Member" m
+      WHERE m."deletedAt" IS NULL AND m."deletionRequestedAt" IS NULL
+      GROUP BY cohort
+      ORDER BY cohort DESC
+      LIMIT 12
+    `
   ]);
 
   const dailyBuckets = bucketByDay(members);
@@ -175,6 +209,45 @@ export default async function ReportsPage({
                     <td className="px-2 py-2 text-right font-mono text-xs">
                       {pct === null ? "—" : `${pct}%`}
                     </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        )}
+      </section>
+
+      <section className="rounded-xl bg-white p-5 ring-1 ring-slate-200">
+        <h2 className="mb-3 text-sm font-semibold text-slate-900">Cohort retention</h2>
+        <p className="mb-3 text-xs text-slate-500">
+          Each row is the sign-up month. Cells show the percentage of members from that cohort
+          who&rsquo;d RSVPed at least once within 30 / 60 / 90 days of joining.
+        </p>
+        {cohortRows.length === 0 ? (
+          <Empty />
+        ) : (
+          <table className="min-w-full divide-y divide-slate-200 text-sm">
+            <thead className="text-xs uppercase tracking-wide text-slate-500">
+              <tr>
+                <th className="px-2 py-2 text-left font-semibold">Cohort</th>
+                <th className="px-2 py-2 text-right font-semibold">Size</th>
+                <th className="px-2 py-2 text-right font-semibold">30d</th>
+                <th className="px-2 py-2 text-right font-semibold">60d</th>
+                <th className="px-2 py-2 text-right font-semibold">90d</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100">
+              {cohortRows.map((row) => {
+                const size = Number(row.size);
+                const pct = (n: bigint) =>
+                  size === 0 ? "—" : `${Math.round((Number(n) / size) * 100)}%`;
+                return (
+                  <tr key={row.cohort}>
+                    <td className="px-2 py-2 font-mono text-slate-700">{row.cohort}</td>
+                    <td className="px-2 py-2 text-right text-slate-600">{size}</td>
+                    <td className="px-2 py-2 text-right">{pct(row.rsvped30)}</td>
+                    <td className="px-2 py-2 text-right">{pct(row.rsvped60)}</td>
+                    <td className="px-2 py-2 text-right">{pct(row.rsvped90)}</td>
                   </tr>
                 );
               })}

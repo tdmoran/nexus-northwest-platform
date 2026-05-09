@@ -1,6 +1,8 @@
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/db";
 import { lookupToken } from "@/lib/tokens";
+import { ensureInviteSlug, countReferralsBySlug } from "@/server/invite";
+import { publicUrl } from "@/lib/urls";
 import { PreferencesForm } from "./PreferencesForm";
 import { GdprActions } from "./GdprActions";
 
@@ -13,6 +15,9 @@ export default async function PreferencesPage({ params }: { params: { token: str
   if (!member) notFound();
 
   const calendarUrl = `${process.env.NEXT_PUBLIC_SITE_URL ?? ""}/api/calendar/${encodeURIComponent(token)}`;
+  const slug = await ensureInviteSlug(member.id);
+  const inviteUrl = publicUrl(`/?ref=${encodeURIComponent(slug)}&utm_source=referral&utm_medium=member-invite`);
+  const referralCount = await countReferralsBySlug(slug);
 
   return (
     <main id="main" className="mx-auto max-w-xl px-4 py-12">
@@ -28,9 +33,25 @@ export default async function PreferencesPage({ params }: { params: { token: str
             phone: member.phone ?? "",
             whatsappNumber: member.whatsappNumber ?? "",
             whatsappConsent: member.whatsappConsent,
-            emailConsent: member.emailConsent
+            emailConsent: member.emailConsent,
+            publicProfile: member.publicProfile,
+            headline: member.headline ?? "",
+            bio: member.bio ?? ""
           }}
         />
+
+        <hr className="my-6 border-slate-200" />
+        <h2 className="text-sm font-semibold text-slate-900">Bring a friend</h2>
+        <p className="mt-1 text-xs text-slate-600">
+          Share your personal invite link. Sign-ups via this link are credited to you — you can see
+          how many friends you&rsquo;ve introduced below.
+        </p>
+        <code className="mt-2 block break-all rounded-md bg-slate-50 px-3 py-2 font-mono text-xs text-slate-700">
+          {inviteUrl}
+        </code>
+        <p className="mt-2 text-xs text-slate-500">
+          Friends introduced so far: <strong>{referralCount}</strong>
+        </p>
 
         <hr className="my-6 border-slate-200" />
         <h2 className="text-sm font-semibold text-slate-900">Calendar subscription</h2>

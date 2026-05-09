@@ -21,6 +21,7 @@ import { dispatchDueReminders } from "@/server/reminders";
 import { dispatchDueScheduledAnnouncements } from "@/server/announcements";
 import { processExpiredDeletions } from "@/server/gdpr";
 import { materialiseSeriesOccurrences } from "@/server/event-series";
+import { dispatchPostEventSurveys } from "@/server/surveys";
 import { AnnouncementStatus } from "@prisma/client";
 
 // ----------------------------- Welcome email --------------------------------
@@ -169,6 +170,14 @@ export const eventSeriesCron = inngest.createFunction(
   { cron: "0 */6 * * *" }, // every 6 hours
   async ({ step }) => {
     return step.run("materialise", () => materialiseSeriesOccurrences());
+  }
+);
+
+export const surveyDispatchCron = inngest.createFunction(
+  { id: "survey-dispatch-cron", retries: 3 },
+  { cron: "0 * * * *" }, // hourly
+  async ({ step }) => {
+    return step.run("dispatch", () => dispatchPostEventSurveys());
   }
 );
 
@@ -321,5 +330,6 @@ export const allFunctions = [
   scheduledAnnouncementsCron,
   gdprDeletionCron,
   eventSeriesCron,
+  surveyDispatchCron,
   dispatchAnnouncement
 ];

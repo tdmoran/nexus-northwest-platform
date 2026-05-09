@@ -21,7 +21,9 @@ export async function GET(req: Request) {
       margin: 2,
       errorCorrectionLevel: "M"
     });
-    return new NextResponse(buffer, {
+    // Buffer isn't a BodyInit under newer @types/node, but the underlying
+    // bytes are. Wrap in Uint8Array which is.
+    return new NextResponse(new Uint8Array(buffer), {
       headers: {
         "Content-Type": "image/png",
         "Content-Disposition": `attachment; filename="qr.png"`,

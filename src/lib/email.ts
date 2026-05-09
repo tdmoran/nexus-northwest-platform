@@ -1,6 +1,7 @@
 import { promises as fs } from "fs";
 import { join } from "path";
 import { env } from "@/lib/env";
+import { log } from "@/lib/logger";
 
 export interface EmailMessage {
   to: string;
@@ -28,7 +29,7 @@ class StubEmailProvider implements EmailProvider {
       (headers ? `${headers}\n` : "") +
       `Content-Type: text/html; charset=utf-8\n\n${msg.html}`;
     await fs.writeFile(path, body, "utf8");
-    console.log(`[email:stub] wrote ${path}`);
+    log.info("email.stub.wrote", { path, to: msg.to });
     return { id };
   }
 }

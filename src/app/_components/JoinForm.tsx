@@ -13,6 +13,8 @@ export function JoinForm() {
   const [consent, setConsent] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // Honeypot: real users won't fill this. We never reference setHoneypot.
+  const [honeypot] = useState("");
 
   // Persist UTM params from the inbound URL on the form for submission.
   const [utm, setUtm] = useState<Record<string, string>>({});
@@ -42,6 +44,7 @@ export function JoinForm() {
           name,
           email,
           consent: true,
+          website: honeypot,
           utmSource: utm.utm_source,
           utmMedium: utm.utm_medium,
           utmCampaign: utm.utm_campaign,
@@ -63,6 +66,19 @@ export function JoinForm() {
 
   return (
     <form onSubmit={onSubmit} className="space-y-4">
+      {/* Honeypot — visually hidden but reachable to dumb bots. Real users don't see or fill this. */}
+      <div aria-hidden="true" className="absolute left-[-10000px] top-auto h-px w-px overflow-hidden">
+        <label>
+          Website
+          <input
+            type="text"
+            name="website"
+            tabIndex={-1}
+            autoComplete="off"
+            defaultValue=""
+          />
+        </label>
+      </div>
       <Field
         label="Your name"
         name="name"

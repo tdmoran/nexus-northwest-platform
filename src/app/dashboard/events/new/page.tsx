@@ -17,11 +17,19 @@ async function createEvent(formData: FormData) {
 
   const event = await prisma.event.create({
     data: {
-      ...parsed.data,
+      title: parsed.data.title,
+      description: parsed.data.description,
+      startsAt: parsed.data.startsAt,
+      endsAt: parsed.data.endsAt ?? null,
+      timezone: parsed.data.timezone,
+      location: parsed.data.location,
       onlineUrl: parsed.data.onlineUrl || null,
       heroImageUrl: parsed.data.heroImageUrl || null,
-      endsAt: parsed.data.endsAt ?? null,
       capacity: parsed.data.capacity ?? null,
+      rsvpEnabled: parsed.data.rsvpEnabled,
+      reminderOffsets: parsed.data.reminderOffsets,
+      reminderAudience: parsed.data.reminderAudience,
+      tags: parsed.data.tags,
       createdById: user.id
     }
   });

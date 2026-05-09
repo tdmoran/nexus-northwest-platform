@@ -4,13 +4,12 @@ import { sendEmail } from "@/lib/email";
 import { announcementEmail } from "@/lib/templates";
 import { issueToken } from "@/lib/tokens";
 import { rsvpUrl, preferencesUrl, unsubscribeUrl } from "@/lib/urls";
+import { log } from "@/lib/logger";
 
 interface DispatchResult {
   scanned: number;
   fired: Array<{ eventId: string; offsetMinutes: number; recipientCount: number; failedCount: number }>;
 }
-
-const DEFAULT_AUDIENCE: "all" | "rsvp_yes" = "all";
 
 export async function dispatchDueReminders(now: Date = new Date()): Promise<DispatchResult> {
   // Find events starting within the maximum offset window we care about.
@@ -37,7 +36,9 @@ export async function dispatchDueReminders(now: Date = new Date()): Promise<Disp
       const already = event.reminders.find((r) => r.offsetMinutes === offset);
       if (already) continue;
 
-      const result = await fireReminder(event.id, offset, DEFAULT_AUDIENCE);
+      const audience: "all" | "rsvp_yes" =
+        event.reminderAudience === "rsvp_yes" ? "rsvp_yes" : "all";
+      const result = await fireReminder(event.id, offset, audience);
       fired.push({ eventId: event.id, offsetMinutes: offset, ...result });
     }
   }
@@ -108,7 +109,7 @@ async function fireReminder(
       sent++;
     } catch (err) {
       failed++;
-      console.error("reminder send failed", { email: member.email, err });
+      log.error("reminder.send.failed", { email: member.email, err: String(err) });
     }
   }
 

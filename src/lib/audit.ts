@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/db";
+import { log } from "@/lib/logger";
 
 export async function audit(opts: {
   action: string;
@@ -19,6 +20,6 @@ export async function audit(opts: {
     });
   } catch (err) {
     // Audit must not break the user-facing flow — log and continue.
-    console.error("audit.write_failed", { action: opts.action, err });
+    log.error("audit.write_failed", { action: opts.action, err: String(err) });
   }
 }

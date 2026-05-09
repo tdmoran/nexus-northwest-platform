@@ -5,6 +5,7 @@ import { announcementEmail } from "@/lib/templates";
 import { issueToken } from "@/lib/tokens";
 import { rsvpUrl, preferencesUrl, unsubscribeUrl } from "@/lib/urls";
 import { Channel, AnnouncementStatus } from "@prisma/client";
+import { log } from "@/lib/logger";
 
 export interface SendAnnouncementInput {
   eventId: string;
@@ -76,7 +77,7 @@ export async function sendEventAnnouncement(input: SendAnnouncementInput): Promi
       sent++;
     } catch (err) {
       failed++;
-      console.error(`announcement send failed for ${member.email}`, err);
+      log.error("announcement.member.failed", { email: member.email, err: String(err) });
       await audit({
         action: "announcement.send.member.failed",
         actorId: input.actorId,

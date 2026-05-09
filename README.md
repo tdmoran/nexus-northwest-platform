@@ -24,7 +24,16 @@ MVP implementation of the Nexus Northwest Functional Specification (v1.2). One N
 **Reminders**
 - Cron-style endpoint `POST /api/cron/reminders` (or `GET`) protected by `Authorization: Bearer $CRON_SECRET`
 - Idempotent per (event, offset) via the `Reminder` table — safe to fire every minute
-- Wire to Vercel Cron, GitHub Actions, or any scheduler
+- `vercel.json` ships with a Vercel Cron entry every 10 minutes. When `CRON_SECRET` is set in Vercel project env, Vercel automatically adds the bearer header
+- Per-event reminder offsets and audience (all / RSVP-Yes-only) configurable in the event form
+
+**Bounce / complaint webhook**
+- `POST /api/webhooks/email` — accepts SendGrid array shape and Resend single-event shape. Authenticate with `Authorization: Bearer $EMAIL_WEBHOOK_SECRET`. Bounces flip `emailBouncedAt`; bounces, complaints, and group-unsubscribes all clear `emailConsent` and stamp `emailOptOutAt`
+- Replace bearer with provider-specific HMAC verification before going to production
+
+**Anti-abuse on sign-up**
+- Per-IP rate limit (5 attempts / 60 s, in-memory; swap for Redis when running multi-instance)
+- Hidden honeypot field — bots that fill it get a 201 with no work done
 
 **Boundaries kept clean**
 - `src/lib/zoho.ts` — stubbed Zoho CRM upsert; flip `ZOHO_ENABLED=true` and provide credentials to use real API
@@ -190,10 +199,23 @@ npm run dev          # next dev
 npm run build        # next build
 npm run start        # next start
 npm run typecheck    # tsc --noEmit
+npm test             # vitest run (unit tests)
+npm run test:watch   # vitest in watch mode
 npm run db:migrate   # prisma migrate dev
 npm run db:seed      # tsx prisma/seed.ts
 npm run db:studio    # prisma studio
 ```
+
+## CI
+
+`.github/workflows/ci.yml` runs on every PR and push to main:
+
+1. `prisma generate` + `prisma validate`
+2. `npm run typecheck`
+3. `npm test`
+4. `npm run build`
+
+All steps run with placeholder env vars defined in the workflow — no real secrets needed for CI.
 
 ## Notes
 

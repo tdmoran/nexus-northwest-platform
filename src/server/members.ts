@@ -6,6 +6,7 @@ import { welcomeEmail } from "@/lib/templates";
 import { issueToken } from "@/lib/tokens";
 import { preferencesUrl, unsubscribeUrl } from "@/lib/urls";
 import type { SignupInput } from "@/lib/validation";
+import { log } from "@/lib/logger";
 
 export async function signupMember(input: SignupInput): Promise<{
   memberId: string;
@@ -94,7 +95,7 @@ export async function signupMember(input: SignupInput): Promise<{
         channel: "email"
       });
     } catch (err) {
-      console.error("welcome email failed", err);
+      log.error("welcome_email.failed", { memberId: member.id, err: String(err) });
       await audit({
         action: "email.welcome.failed",
         memberId: member.id,

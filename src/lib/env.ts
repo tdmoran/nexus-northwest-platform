@@ -11,6 +11,7 @@ const schema = z.object({
   EMAIL_FROM: z.string().email().default("hello@nexusnorthwest.example"),
   EMAIL_PROVIDER: z.enum(["stub", "sendgrid", "resend"]).default("stub"),
   EMAIL_API_KEY: z.string().optional().default(""),
+  EMAIL_WEBHOOK_SECRET: z.string().min(8).default("dev-email-webhook-secret"),
   ZOHO_ENABLED: z.string().default("false"),
   ZOHO_CLIENT_ID: z.string().optional().default(""),
   ZOHO_CLIENT_SECRET: z.string().optional().default(""),
@@ -24,6 +25,8 @@ const schema = z.object({
 const parsed = schema.safeParse(process.env);
 
 if (!parsed.success) {
+  // env validation runs at module load so we can't use the logger yet (circular).
+  // eslint-disable-next-line no-console
   console.error("Invalid environment variables:", parsed.error.flatten().fieldErrors);
   throw new Error("Environment validation failed. See .env.example.");
 }

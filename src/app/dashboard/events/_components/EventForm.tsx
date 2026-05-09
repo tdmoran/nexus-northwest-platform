@@ -10,6 +10,8 @@ interface EventFormValues {
   capacity?: number | null;
   rsvpEnabled?: boolean;
   tags?: string[];
+  reminderOffsets?: number[];
+  reminderAudience?: "all" | "rsvp_yes";
 }
 
 function toLocalInput(d: Date | null | undefined): string {
@@ -64,6 +66,27 @@ export function EventForm({
       <label className="flex items-center gap-2 text-sm text-slate-700">
         <input type="checkbox" name="rsvpEnabled" defaultChecked={v.rsvpEnabled ?? true} /> Enable RSVP
       </label>
+      <fieldset className="rounded-lg border border-slate-200 p-3">
+        <legend className="px-1 text-xs font-semibold uppercase tracking-wide text-slate-500">
+          Reminders
+        </legend>
+        <Input
+          label="Send at (minutes before start, comma-separated)"
+          name="reminderOffsets"
+          defaultValue={(v.reminderOffsets ?? [10080, 1440, 120]).join(", ")}
+        />
+        <label className="mt-3 block">
+          <span className="text-sm font-medium text-slate-700">Audience</span>
+          <select
+            name="reminderAudience"
+            defaultValue={v.reminderAudience ?? "all"}
+            className="mt-1 block w-full rounded-lg border border-slate-300 px-3 py-2 text-sm shadow-sm focus:border-brand-500 focus:ring-1 focus:ring-brand-500"
+          >
+            <option value="all">All email-consenting members</option>
+            <option value="rsvp_yes">Only members who RSVP&rsquo;d Yes</option>
+          </select>
+        </label>
+      </fieldset>
       <button
         type="submit"
         className="rounded-lg bg-brand-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-brand-700"
@@ -107,6 +130,15 @@ export function readEventFormData(formData: FormData): {
     const v = formData.get(k);
     return typeof v === "string" && v.length > 0 ? v : undefined;
   };
+  const offsets = (str("reminderOffsets") ?? "10080,1440,120")
+    .split(",")
+    .map((s) => Number(s.trim()))
+    .filter((n) => Number.isFinite(n) && n >= 0);
+
+  const audienceRaw = str("reminderAudience") ?? "all";
+  const reminderAudience: "all" | "rsvp_yes" =
+    audienceRaw === "rsvp_yes" ? "rsvp_yes" : "all";
+
   return {
     raw: {
       title: str("title"),
@@ -119,7 +151,8 @@ export function readEventFormData(formData: FormData): {
       heroImageUrl: str("heroImageUrl") ?? null,
       capacity: str("capacity") ?? null,
       rsvpEnabled: formData.get("rsvpEnabled") === "on",
-      reminderOffsets: [10080, 1440, 120],
+      reminderOffsets: offsets.length > 0 ? offsets : [10080, 1440, 120],
+      reminderAudience,
       tags: (str("tags") ?? "")
         .split(",")
         .map((s) => s.trim())

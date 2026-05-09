@@ -9,6 +9,7 @@
 // needed when you wire real custom fields.
 
 import { env } from "@/lib/env";
+import { log } from "@/lib/logger";
 
 export interface ZohoMemberPayload {
   email: string;
@@ -114,7 +115,7 @@ export async function syncMember(payload: ZohoMemberPayload): Promise<ZohoSyncRe
   try {
     return await upsertReal(payload);
   } catch (err) {
-    console.error("zoho.syncMember failed", err);
+    log.error("zoho.sync.failed", { err: String(err) });
     // Surface but do not break sign-up: caller may schedule a retry.
     return { zohoId: null, skipped: false };
   }

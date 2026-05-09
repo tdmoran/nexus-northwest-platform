@@ -4,6 +4,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { can } from "@/lib/rbac";
 import { sendEventAnnouncement } from "@/server/announcements";
+import { log } from "@/lib/logger";
 
 const bodySchema = z.object({
   audience: z.enum(["all", "rsvp_yes"]).default("all")
@@ -35,7 +36,7 @@ export async function POST(req: Request, { params }: { params: { id: string } })
     });
     return NextResponse.json(result);
   } catch (err) {
-    console.error("announce error", err);
+    log.error("announce.failed", { err: String(err) });
     return NextResponse.json(
       { error: (err as Error).message ?? "Internal error" },
       { status: 500 }

@@ -6,6 +6,8 @@ export const signupSchema = z.object({
   consent: z.literal(true, {
     errorMap: () => ({ message: "Consent is required to sign up." })
   }),
+  // Honeypot — must be empty. Bots tend to fill every field.
+  website: z.string().max(0).optional().default(""),
   utmSource: z.string().max(120).optional(),
   utmMedium: z.string().max(120).optional(),
   utmCampaign: z.string().max(120).optional(),
@@ -37,6 +39,7 @@ export const eventSchema = z.object({
   capacity: z.coerce.number().int().positive().optional().nullable(),
   rsvpEnabled: z.boolean().default(true),
   reminderOffsets: z.array(z.number().int().nonnegative()).default([10080, 1440, 120]),
+  reminderAudience: z.enum(["all", "rsvp_yes"]).default("all"),
   tags: z.array(z.string()).default([])
 });
 

@@ -33,6 +33,8 @@ export default async function EditEventPage({ params }: { params: { id: string }
         heroImageUrl: parsed.data.heroImageUrl || null,
         capacity: parsed.data.capacity ?? null,
         rsvpEnabled: parsed.data.rsvpEnabled,
+        reminderOffsets: parsed.data.reminderOffsets,
+        reminderAudience: parsed.data.reminderAudience,
         tags: parsed.data.tags
       }
     });
@@ -62,6 +64,8 @@ export default async function EditEventPage({ params }: { params: { id: string }
           heroImageUrl: event.heroImageUrl,
           capacity: event.capacity,
           rsvpEnabled: event.rsvpEnabled,
+          reminderOffsets: event.reminderOffsets,
+          reminderAudience: event.reminderAudience === "rsvp_yes" ? "rsvp_yes" : "all",
           tags: event.tags
         }}
         submitLabel="Save changes"

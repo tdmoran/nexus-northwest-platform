@@ -1,7 +1,8 @@
 // Set deterministic env vars before any module loads. These satisfy the
 // Zod schema in src/lib/env.ts so tests can import modules transitively.
 
-process.env.NODE_ENV = "test";
+// NODE_ENV is read-only in @types/node ≥20; assign via index access to bypass.
+(process.env as Record<string, string>).NODE_ENV = "test";
 process.env.DATABASE_URL = process.env.DATABASE_URL ?? "postgresql://test:test@localhost:5432/test";
 process.env.NEXTAUTH_SECRET = process.env.NEXTAUTH_SECRET ?? "test-nextauth-secret-32bytes-min";
 process.env.NEXTAUTH_URL = process.env.NEXTAUTH_URL ?? "http://localhost:3000";

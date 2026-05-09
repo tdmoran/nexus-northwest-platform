@@ -30,6 +30,7 @@ describe("signupMember (integration)", () => {
       name: "Tom Test",
       email: "tom.test@example.com",
       consent: true,
+      website: "",
       utmSource: "linkedin",
       utmCampaign: "march26",
       referralCode: "ABC123"
@@ -58,8 +59,13 @@ describe("signupMember (integration)", () => {
   });
 
   it("idempotent on duplicate email — does not resend welcome", async () => {
-    await signupMember({ name: "Tom", email: "dup@example.com", consent: true });
-    await signupMember({ name: "Tom (again)", email: "dup@example.com", consent: true });
+    await signupMember({ name: "Tom", email: "dup@example.com", consent: true, website: "" });
+    await signupMember({
+      name: "Tom (again)",
+      email: "dup@example.com",
+      consent: true,
+      website: ""
+    });
 
     const members = await prisma.member.findMany({ where: { email: "dup@example.com" } });
     expect(members).toHaveLength(1);

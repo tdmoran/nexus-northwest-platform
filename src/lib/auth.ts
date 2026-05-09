@@ -1,9 +1,13 @@
-import type { NextAuthOptions } from "next-auth";
+import type { NextAuthOptions, Provider } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
+import GoogleProvider from "next-auth/providers/google";
+import AzureADProvider from "next-auth/providers/azure-ad";
 import argon2 from "argon2";
 import { prisma } from "@/lib/db";
 import { env } from "@/lib/env";
 import { verifyTOTP } from "@/lib/totp";
+import { audit } from "@/lib/audit";
+import { log } from "@/lib/logger";
 import type { OrganiserRole } from "@prisma/client";
 
 export class MfaRequiredError extends Error {
@@ -42,6 +46,67 @@ declare module "next-auth/jwt" {
   }
 }
 
+const credentials = CredentialsProvider({
+  name: "Email + password",
+  credentials: {
+    email: { label: "Email", type: "email" },
+    password: { label: "Password", type: "password" },
+    mfaCode: { label: "Authenticator code", type: "text" }
+  },
+  async authorize(credentials) {
+    if (!credentials?.email || !credentials?.password) return null;
+
+    const user = await prisma.organiserUser.findUnique({
+      where: { email: credentials.email.toLowerCase().trim() }
+    });
+    if (!user || !user.active) return null;
+
+    const ok = await argon2.verify(user.passwordHash, credentials.password);
+    if (!ok) return null;
+
+    if (user.mfaEnrolled) {
+      if (!user.mfaSecret) return null;
+      const code = (credentials.mfaCode ?? "").toString().trim();
+      if (!code) throw new MfaRequiredError();
+      if (!verifyTOTP(user.mfaSecret, code)) throw new MfaInvalidError();
+    }
+
+    await prisma.organiserUser.update({
+      where: { id: user.id },
+      data: { lastLoginAt: new Date() }
+    });
+
+    return { id: user.id, email: user.email, name: user.name, role: user.role };
+  }
+});
+
+const providers: Provider[] = [credentials];
+
+if (env.GOOGLE_CLIENT_ID && env.GOOGLE_CLIENT_SECRET) {
+  providers.push(
+    GoogleProvider({
+      clientId: env.GOOGLE_CLIENT_ID,
+      clientSecret: env.GOOGLE_CLIENT_SECRET,
+      authorization: { params: { prompt: "select_account" } }
+    })
+  );
+}
+
+if (env.AZURE_AD_CLIENT_ID && env.AZURE_AD_CLIENT_SECRET) {
+  providers.push(
+    AzureADProvider({
+      clientId: env.AZURE_AD_CLIENT_ID,
+      clientSecret: env.AZURE_AD_CLIENT_SECRET,
+      tenantId: env.AZURE_AD_TENANT_ID || "common"
+    })
+  );
+}
+
+export const ssoEnabled = {
+  google: Boolean(env.GOOGLE_CLIENT_ID && env.GOOGLE_CLIENT_SECRET),
+  azure: Boolean(env.AZURE_AD_CLIENT_ID && env.AZURE_AD_CLIENT_SECRET)
+};
+
 export const authOptions: NextAuthOptions = {
   secret: env.NEXTAUTH_SECRET,
   session: { strategy: "jwt", maxAge: 60 * 60 * 8 },
@@ -49,50 +114,46 @@ export const authOptions: NextAuthOptions = {
     signIn: "/login",
     error: "/login"
   },
-  providers: [
-    CredentialsProvider({
-      name: "Email + password",
-      credentials: {
-        email: { label: "Email", type: "email" },
-        password: { label: "Password", type: "password" },
-        mfaCode: { label: "Authenticator code", type: "text" }
-      },
-      async authorize(credentials) {
-        if (!credentials?.email || !credentials?.password) return null;
-
-        const user = await prisma.organiserUser.findUnique({
-          where: { email: credentials.email.toLowerCase().trim() }
-        });
-        if (!user || !user.active) return null;
-
-        const ok = await argon2.verify(user.passwordHash, credentials.password);
-        if (!ok) return null;
-
-        if (user.mfaEnrolled) {
-          if (!user.mfaSecret) {
-            // Inconsistent state — refuse login until an admin re-enrolls.
-            return null;
-          }
-          const code = (credentials.mfaCode ?? "").toString().trim();
-          if (!code) throw new MfaRequiredError();
-          if (!verifyTOTP(user.mfaSecret, code)) throw new MfaInvalidError();
-        }
-
-        await prisma.organiserUser.update({
-          where: { id: user.id },
-          data: { lastLoginAt: new Date() }
-        });
-
-        return {
-          id: user.id,
-          email: user.email,
-          name: user.name,
-          role: user.role
-        };
-      }
-    })
-  ],
+  providers,
   callbacks: {
+    // Invite-only: SSO sign-in is permitted only when an active OrganiserUser
+    // already exists for the email. This prevents a public OAuth login from
+    // creating an organiser account by accident.
+    async signIn({ user, account, profile }) {
+      if (account?.provider === "credentials") return true;
+
+      const email = (profile?.email ?? user.email ?? "").toLowerCase().trim();
+      if (!email) {
+        log.warn("sso.signin.no_email", { provider: account?.provider });
+        return "/login?error=sso_no_email";
+      }
+      const record = await prisma.organiserUser.findUnique({ where: { email } });
+      if (!record) {
+        log.warn("sso.signin.unknown_user", { email, provider: account?.provider });
+        return "/login?error=sso_not_invited";
+      }
+      if (!record.active) {
+        log.warn("sso.signin.disabled_user", { email, provider: account?.provider });
+        return "/login?error=sso_disabled";
+      }
+
+      // Mutate the user object so the jwt callback persists the right id/role.
+      user.id = record.id;
+      user.role = record.role;
+      user.name = record.name;
+      user.email = record.email;
+
+      await prisma.organiserUser.update({
+        where: { id: record.id },
+        data: { lastLoginAt: new Date() }
+      });
+      await audit({
+        action: "auth.sso.signin",
+        actorId: record.id,
+        meta: { provider: account?.provider }
+      });
+      return true;
+    },
     async jwt({ token, user }) {
       if (user) {
         token.id = user.id;

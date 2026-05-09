@@ -39,6 +39,17 @@ MVP implementation of the Nexus Northwest Functional Specification (v1.2). One N
 - Disable requires a current TOTP code; every state change is audited
 - Strongly recommended for Admin and Super Admin (UI flag highlights this)
 
+**SSO (optional)**
+- Google OAuth (`GOOGLE_CLIENT_ID` + `GOOGLE_CLIENT_SECRET`)
+- Microsoft Azure AD / Entra ID (`AZURE_AD_CLIENT_ID` + `AZURE_AD_CLIENT_SECRET` + `AZURE_AD_TENANT_ID`, `common` for multi-tenant)
+- Invite-only: SSO sign-in is allowed only when an active `OrganiserUser` already exists for the email — admins must invite first via `/dashboard/users`
+- Login page auto-shows provider buttons when keys are present
+- Every SSO sign-in is audited
+
+**Operations**
+- `GET /api/health` — liveness + readiness (200 only when DB responds; 503 with diagnostics otherwise). Suitable for container orchestrators and uptime monitors
+- `/robots.txt` + `/sitemap.xml` — public site indexed; dashboard, API, and tokenised paths blocked
+
 **Anti-abuse on sign-up**
 - Per-IP rate limit (5 attempts / 60 s)
 - Pluggable backend: in-memory by default, Redis-backed when `REDIS_URL` is set (ioredis is an optional dep — single-instance setups skip the install)
@@ -242,12 +253,10 @@ npm run db:studio    # prisma studio
 
 ## CI
 
-`.github/workflows/ci.yml` runs on every PR and push to main:
+`.github/workflows/ci.yml` runs two jobs on every PR and push to main:
 
-1. `prisma generate` + `prisma validate`
-2. `npm run typecheck`
-3. `npm test`
-4. `npm run build`
+1. **`validate`** — `prisma generate` + `prisma validate` + `npm run typecheck` + `npm test` + `npm run build`
+2. **`integration`** — spins a real Postgres service, runs `prisma migrate deploy`, then `npm run test:integration` against the DB (sign-up flow, welcome-email side effect, token round-trip, idempotent dedupe)
 
 All steps run with placeholder env vars defined in the workflow — no real secrets needed for CI.
 

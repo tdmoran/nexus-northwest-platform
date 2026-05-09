@@ -6,6 +6,7 @@ import argon2 from "argon2";
 import { prisma } from "@/lib/db";
 import { env } from "@/lib/env";
 import { verifyTOTP } from "@/lib/totp";
+import { consumeMagicLink } from "@/server/magic-link";
 import { audit } from "@/lib/audit";
 import { log } from "@/lib/logger";
 import type { OrganiserRole } from "@prisma/client";
@@ -51,9 +52,20 @@ const credentials = CredentialsProvider({
   credentials: {
     email: { label: "Email", type: "email" },
     password: { label: "Password", type: "password" },
-    mfaCode: { label: "Authenticator code", type: "text" }
+    mfaCode: { label: "Authenticator code", type: "text" },
+    magicToken: { label: "Magic link token", type: "text" }
   },
   async authorize(credentials) {
+    // Magic-link path: present a single-use signed token instead of password.
+    if (credentials?.magicToken) {
+      const result = await consumeMagicLink(credentials.magicToken);
+      if (!result) return null;
+      const user = await prisma.organiserUser.findUnique({ where: { id: result.organiserUserId } });
+      if (!user || !user.active) return null;
+      // Magic-link sign-in does not require MFA — the email channel is the second factor.
+      return { id: user.id, email: user.email, name: user.name, role: user.role };
+    }
+
     if (!credentials?.email || !credentials?.password) return null;
 
     const user = await prisma.organiserUser.findUnique({

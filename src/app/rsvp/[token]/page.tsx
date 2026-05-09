@@ -61,7 +61,7 @@ export default async function RsvpPage({ params, searchParams }: Props) {
   });
 
   return (
-    <main className="mx-auto max-w-xl px-4 py-16">
+    <main id="main" className="mx-auto max-w-xl px-4 py-16">
       <div className="rounded-2xl bg-white p-8 shadow-sm ring-1 ring-slate-200">
         {atCapacity ? (
           <>

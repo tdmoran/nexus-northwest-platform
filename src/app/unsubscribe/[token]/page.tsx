@@ -29,7 +29,7 @@ export default async function UnsubscribePage({ params }: { params: { token: str
   });
 
   return (
-    <main className="mx-auto max-w-xl px-4 py-16">
+    <main id="main" className="mx-auto max-w-xl px-4 py-16">
       <div className="rounded-2xl bg-white p-8 shadow-sm ring-1 ring-slate-200">
         <h1 className="text-xl font-bold text-slate-900">You&rsquo;ve been unsubscribed.</h1>
         <p className="mt-3 text-slate-600">

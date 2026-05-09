@@ -46,6 +46,13 @@ MVP implementation of the Nexus Northwest Functional Specification (v1.2). One N
 - Login page auto-shows provider buttons when keys are present
 - Every SSO sign-in is audited
 
+**Magic-link sign-in**
+- One-time signed link (15-min TTL, single-use) issued by `POST /api/auth/magic-link`
+- Per-IP rate-limited (5/60 s); responds identically whether email is known to avoid leaking organiser membership
+- Callback at `/auth/magic/[token]` consumes the token and creates a NextAuth session
+- `MagicLink` table tracks issuance + consumption with auditing
+- Surfaces on the login page as a "Forgot your password?" `<details>` block
+
 **WhatsApp Business (Cloud API)**
 - Direct messaging via Meta Cloud API, gated by `WHATSAPP_ENABLED=true`
 - Stub mode (default) records outgoing messages without contacting Meta — flows can be exercised end-to-end
@@ -263,23 +270,26 @@ src/
 ## Scripts
 
 ```bash
-npm run dev          # next dev
-npm run build        # next build
-npm run start        # next start
-npm run typecheck    # tsc --noEmit
-npm test             # vitest run (unit tests)
-npm run test:watch   # vitest in watch mode
-npm run db:migrate   # prisma migrate dev
-npm run db:seed      # tsx prisma/seed.ts
-npm run db:studio    # prisma studio
+npm run dev               # next dev
+npm run build             # next build
+npm run start             # next start
+npm run typecheck         # tsc --noEmit
+npm test                  # vitest run (unit)
+npm run test:watch        # vitest in watch mode
+npm run test:integration  # vitest, DB-backed
+npm run test:e2e          # playwright + axe-core
+npm run db:migrate        # prisma migrate dev
+npm run db:seed           # tsx prisma/seed.ts
+npm run db:studio         # prisma studio
 ```
 
 ## CI
 
-`.github/workflows/ci.yml` runs two jobs on every PR and push to main:
+`.github/workflows/ci.yml` runs three jobs on every PR and push to main:
 
-1. **`validate`** — `prisma generate` + `prisma validate` + `npm run typecheck` + `npm test` + `npm run build`
-2. **`integration`** — spins a real Postgres service, runs `prisma migrate deploy`, then `npm run test:integration` against the DB (sign-up flow, welcome-email side effect, token round-trip, idempotent dedupe)
+1. **`validate`** — `prisma generate` + `prisma validate` + `npm run typecheck` + `npm test` (vitest unit) + `npm run build`
+2. **`integration`** — spins a real Postgres service, runs `prisma migrate deploy`, then `npm run test:integration` against the DB (sign-up flow, welcome-email side effect, token round-trip, idempotent dedupe, announcement send filtering, reminder dispatch idempotency, bounce handling)
+3. **`e2e`** — Playwright + axe-core against a real Postgres-backed build. Smoke tests landing / login / privacy and asserts WCAG 2.1 AA compliance via axe. Runs Desktop Chrome + Mobile Safari profiles.
 
 All steps run with placeholder env vars defined in the workflow — no real secrets needed for CI.
 

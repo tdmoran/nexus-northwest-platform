@@ -240,3 +240,26 @@ Point any HTTP monitor (BetterStack, UptimeRobot, Pingdom) at `/api/health`. Ale
 - [ ] (If SSO) Google / Azure redirect URIs whitelisted in the provider console
 
 When all boxes are ticked, you're ready.
+
+---
+
+## Automated pre-flight check
+
+Run the included script against the live URL before flipping DNS or sending the launch announcement:
+
+```bash
+./scripts/preflight.sh https://your-domain.example
+```
+
+It exercises:
+
+- `/` returns 200
+- HTTPS in use
+- `/api/health` returns `ok: true` with sub-200 ms DB latency
+- `robots.txt` blocks `/dashboard`
+- `sitemap.xml` is served
+- `/login` and `/dashboard` reachable (the latter via redirect)
+- Tokenised paths (`/rsvp/*`, `/preferences/*`, `/unsubscribe/*`) return 404 for invalid tokens (not 500)
+- `/privacy` renders
+
+Exits 0 if all green; non-zero on failures (so you can wire it into a CD pipeline as a gate).

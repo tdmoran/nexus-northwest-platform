@@ -10,3 +10,41 @@ body {
   background: linear-gradient(180deg, #f8fafc 0%, #eef2ff 100%);
   min-height: 100vh;
 }
+
+/* Skip-link: visually hidden until keyboard-focused. */
+.skip-link {
+  position: absolute;
+  top: -40px;
+  left: 8px;
+  background: #1f3585;
+  color: #fff;
+  padding: 8px 12px;
+  border-radius: 6px;
+  font-weight: 600;
+  text-decoration: none;
+  z-index: 100;
+  transition: top 0.15s;
+}
+
+.skip-link:focus {
+  top: 8px;
+  outline: 2px solid #fff;
+  outline-offset: 2px;
+}
+
+/* Stronger, consistent focus ring across all interactive elements. */
+*:focus-visible {
+  outline: 2px solid #2a46ac;
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

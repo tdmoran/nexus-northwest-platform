@@ -96,6 +96,23 @@ These are recommendations against the seven open questions in §16 of the spec. 
 
 ---
 
+## Bonus: LinkedIn enrichment is an explicit non-goal
+
+The spec mentions LinkedIn URLs and profile pictures as optional fields, with a note that automatic enrichment is "best-effort/phase-2". After review, **LinkedIn enrichment is permanently deferred** unless requirements change.
+
+Why:
+
+- **Terms of service.** LinkedIn's User Agreement explicitly prohibits scraping and most forms of automated data extraction. The 2022 *hiQ Labs v. LinkedIn* ruling found that LinkedIn could ban scrapers under the CFAA, and the case settled with hiQ permanently barred from scraping.
+- **GDPR risk.** Scraping public profiles for an EU community may not survive a Schrems-style data-minimisation challenge. The lawful basis is unclear: legitimate interest is contestable, and "consent" can't be inferred from a public profile.
+- **Reliability.** LinkedIn aggressively rate-limits and CAPTCHA-walls automated traffic. Even where legally permissible, scraping breaks weekly.
+- **Member-supplied is sufficient.** The progressive-profiling flow already prompts members to add a LinkedIn URL on the preferences page. Members who want to share, share. Members who don't, don't.
+
+If a future requirement specifically calls for it (e.g., a Sales Navigator-style enrichment for paid-tier members), use **LinkedIn's official APIs** with a partnership agreement, not scraping. Add a `LinkedInEnrichment` model and a separate worker; do not put it in the sign-up path.
+
+**Status:** Not implemented. No issue logged. Revisit only if the product team explicitly asks for it.
+
+---
+
 ## Summary table
 
 | §16 question | Recommendation |
@@ -107,3 +124,4 @@ These are recommendations against the seven open questions in §16 of the spec. 
 | Cancellation | Confirmation page only (no in-email cancel button) |
 | Mandatory fields | Name + Email + consent. No more. |
 | Multi-region | Defer until a real second chapter is queued |
+| LinkedIn enrichment | Permanently deferred — ToS + GDPR + reliability |

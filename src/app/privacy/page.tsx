@@ -1,6 +1,6 @@
 export default function PrivacyPage() {
   return (
-    <main className="mx-auto max-w-2xl px-4 py-12 text-slate-700">
+    <main id="main" className="mx-auto max-w-2xl px-4 py-12 text-slate-700">
       <h1 className="text-2xl font-bold text-slate-900">Privacy</h1>
       <p className="mt-3">
         Nexus Northwest stores the minimum personal data needed to run the community: your name,

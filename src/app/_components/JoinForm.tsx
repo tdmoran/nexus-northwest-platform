@@ -110,11 +110,15 @@ export function JoinForm() {
           preferences or unsubscribe from any email.
         </span>
       </label>
-      {error && (
-        <p role="alert" className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-700">
-          {error}
-        </p>
-      )}
+      <p
+        role="alert"
+        aria-live="polite"
+        className={`rounded-md px-3 py-2 text-sm ${
+          error ? "bg-red-50 text-red-700" : "sr-only"
+        }`}
+      >
+        {error ?? ""}
+      </p>
       <Button type="submit" disabled={submitting} className="w-full">
         {submitting ? "Joining..." : "Join"}
       </Button>

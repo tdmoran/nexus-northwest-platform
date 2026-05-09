@@ -38,6 +38,21 @@ model OrganiserUser {
   actionsOwned  ActionItem[]   @relation("ActionOwner")
   audit         AuditLog[]
   managedMembers Member[]      @relation("MemberAddedBy")
+  magicLinks    MagicLink[]
+}
+
+// One-time login link for organisers. Single-use, short TTL (15 min).
+model MagicLink {
+  id              String        @id @default(cuid())
+  token           String        @unique
+  organiserUserId String
+  organiserUser   OrganiserUser @relation(fields: [organiserUserId], references: [id], onDelete: Cascade)
+  expiresAt       DateTime
+  consumedAt      DateTime?
+  requestedFromIp String?
+  createdAt       DateTime      @default(now())
+
+  @@index([organiserUserId])
 }
 
 // ----------------------------- Members --------------------------------------

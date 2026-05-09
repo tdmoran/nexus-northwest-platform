@@ -50,7 +50,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
             ))}
           </nav>
         </header>
-        <main className="mx-auto max-w-6xl px-4 py-8">{children}</main>
+        <main id="main" className="mx-auto max-w-6xl px-4 py-8">{children}</main>
       </div>
     </SessionProvider>
   );

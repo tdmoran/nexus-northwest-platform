@@ -2,7 +2,7 @@ import { JoinForm } from "./_components/JoinForm";
 
 export default function LandingPage() {
   return (
-    <main className="mx-auto max-w-3xl px-4 py-10 sm:py-16">
+    <main id="main" className="mx-auto max-w-3xl px-4 py-10 sm:py-16">
       <header className="mb-10 sm:mb-14">
         <p className="text-sm font-semibold uppercase tracking-widest text-brand-600">
           Nexus Northwest

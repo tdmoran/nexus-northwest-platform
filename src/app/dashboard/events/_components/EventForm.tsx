@@ -14,10 +14,16 @@ interface EventFormValues {
   reminderAudience?: "all" | "rsvp_yes";
 }
 
-function toLocalInput(d: Date | null | undefined): string {
+function toDateInput(d: Date | null | undefined): string {
   if (!d) return "";
   const tzOffset = d.getTimezoneOffset() * 60000;
-  return new Date(d.getTime() - tzOffset).toISOString().slice(0, 16);
+  return new Date(d.getTime() - tzOffset).toISOString().slice(0, 10); // YYYY-MM-DD
+}
+
+function toTimeInput(d: Date | null | undefined): string {
+  if (!d) return "";
+  const tzOffset = d.getTimezoneOffset() * 60000;
+  return new Date(d.getTime() - tzOffset).toISOString().slice(11, 16); // HH:MM
 }
 
 export function EventForm({
@@ -34,21 +40,49 @@ export function EventForm({
     <form action={action} className="space-y-4 rounded-xl bg-white p-6 ring-1 ring-slate-200">
       <Input label="Title" name="title" defaultValue={v.title ?? ""} required />
       <Textarea label="Description" name="description" rows={6} defaultValue={v.description ?? ""} required />
-      <div className="grid gap-4 sm:grid-cols-2">
-        <Input
-          label="Starts at"
-          name="startsAt"
-          type="datetime-local"
-          defaultValue={toLocalInput(v.startsAt ?? null)}
-          required
-        />
-        <Input
-          label="Ends at (optional)"
-          name="endsAt"
-          type="datetime-local"
-          defaultValue={toLocalInput(v.endsAt ?? null)}
-        />
-      </div>
+
+      <fieldset className="rounded-lg border border-slate-200 p-3">
+        <legend className="px-1 text-xs font-semibold uppercase tracking-wide text-slate-500">
+          Starts
+        </legend>
+        <div className="grid gap-3 sm:grid-cols-2">
+          <Input
+            label="Date"
+            name="startsAtDate"
+            type="date"
+            defaultValue={toDateInput(v.startsAt ?? null)}
+            required
+          />
+          <Input
+            label="Time"
+            name="startsAtTime"
+            type="time"
+            defaultValue={toTimeInput(v.startsAt ?? null)}
+            required
+          />
+        </div>
+      </fieldset>
+
+      <fieldset className="rounded-lg border border-slate-200 p-3">
+        <legend className="px-1 text-xs font-semibold uppercase tracking-wide text-slate-500">
+          Ends (optional)
+        </legend>
+        <div className="grid gap-3 sm:grid-cols-2">
+          <Input
+            label="Date"
+            name="endsAtDate"
+            type="date"
+            defaultValue={toDateInput(v.endsAt ?? null)}
+          />
+          <Input
+            label="Time"
+            name="endsAtTime"
+            type="time"
+            defaultValue={toTimeInput(v.endsAt ?? null)}
+          />
+        </div>
+      </fieldset>
+
       <div className="grid gap-4 sm:grid-cols-2">
         <Input label="Timezone" name="timezone" defaultValue={v.timezone ?? "Europe/Dublin"} />
         <Input
@@ -123,6 +157,13 @@ function Textarea(props: React.TextareaHTMLAttributes<HTMLTextAreaElement> & { l
   );
 }
 
+function combine(date: string | undefined, time: string | undefined): string | undefined {
+  if (!date) return undefined;
+  // Default to 19:00 if time is missing — datetime needs both halves.
+  const t = time && /^\d{2}:\d{2}$/.test(time) ? time : "19:00";
+  return `${date}T${t}`;
+}
+
 export function readEventFormData(formData: FormData): {
   raw: Record<string, unknown>;
 } {
@@ -139,12 +180,15 @@ export function readEventFormData(formData: FormData): {
   const reminderAudience: "all" | "rsvp_yes" =
     audienceRaw === "rsvp_yes" ? "rsvp_yes" : "all";
 
+  const startsAt = combine(str("startsAtDate"), str("startsAtTime"));
+  const endsAt = combine(str("endsAtDate"), str("endsAtTime"));
+
   return {
     raw: {
       title: str("title"),
       description: str("description"),
-      startsAt: str("startsAt"),
-      endsAt: str("endsAt") ?? null,
+      startsAt,
+      endsAt: endsAt ?? null,
       timezone: str("timezone") ?? "Europe/Dublin",
       location: str("location"),
       onlineUrl: str("onlineUrl") ?? null,

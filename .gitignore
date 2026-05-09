@@ -4,9 +4,13 @@ node_modules
 .env.local
 .env.*.local
 .mail/
+.next-dev.log
 dist/
 *.log
 .DS_Store
+*.swp
+*.swo
+*.swn
 playwright-report/
 test-results/
 .playwright/

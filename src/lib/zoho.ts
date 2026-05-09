@@ -32,7 +32,8 @@ export interface ZohoMemberPayload {
 
 export interface ZohoSyncResult {
   zohoId: string | null;
-  skipped: boolean;
+  skipped: boolean;          // true when ZOHO_ENABLED=false (no attempt made)
+  error?: string;            // populated when an attempt was made and failed
 }
 
 let accessToken: { token: string; expiresAt: number } | null = null;
@@ -115,8 +116,9 @@ export async function syncMember(payload: ZohoMemberPayload): Promise<ZohoSyncRe
   try {
     return await upsertReal(payload);
   } catch (err) {
-    log.error("zoho.sync.failed", { err: String(err) });
-    // Surface but do not break sign-up: caller may schedule a retry.
-    return { zohoId: null, skipped: false };
+    const message = err instanceof Error ? err.message : String(err);
+    log.error("zoho.sync.failed", { err: message });
+    // Surface but do not break sign-up: caller persists the failure for retry.
+    return { zohoId: null, skipped: false, error: message };
   }
 }

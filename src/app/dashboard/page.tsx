@@ -1,13 +1,22 @@
 import Link from "next/link";
 import { prisma } from "@/lib/db";
 import { requireUser } from "@/lib/session";
+import { can } from "@/lib/rbac";
+import { ZohoFailureBanner } from "./_components/ZohoFailureBanner";
 
 export default async function OverviewPage() {
-  await requireUser();
+  const user = await requireUser();
 
   const now = new Date();
-  const [memberCount, upcomingEvents, recentMembers, openActions, recentAudit, signupsBySource] =
-    await Promise.all([
+  const [
+    memberCount,
+    upcomingEvents,
+    recentMembers,
+    openActions,
+    recentAudit,
+    signupsBySource,
+    zohoFailures
+  ] = await Promise.all([
       prisma.member.count(),
       prisma.event.findMany({
         where: { startsAt: { gte: now } },
@@ -32,12 +41,18 @@ export default async function OverviewPage() {
         _count: { _all: true },
         orderBy: { _count: { utmSource: "desc" } },
         take: 5
-      })
+      }),
+      prisma.zohoSyncFailure.count({ where: { resolvedAt: null } })
     ]);
 
   return (
     <div className="space-y-8">
       <h1 className="text-2xl font-bold text-slate-900">Overview</h1>
+
+      <ZohoFailureBanner
+        count={zohoFailures}
+        canRetry={can(user.role, "settings.integrations")}
+      />
 
       <section className="grid gap-4 sm:grid-cols-3">
         <Stat label="Members" value={memberCount} />

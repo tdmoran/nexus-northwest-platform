@@ -1,0 +1,16 @@
+node_modules
+.next
+.git
+.github
+.env
+.env.local
+.env.*.local
+.mail/
+*.log
+.DS_Store
+README.md
+docker-compose.yml
+docker-compose.prod.yml
+Dockerfile
+.dockerignore
+coverage/

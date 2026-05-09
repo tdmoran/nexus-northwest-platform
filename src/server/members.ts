@@ -1,6 +1,6 @@
 import { prisma } from "@/lib/db";
 import { audit } from "@/lib/audit";
-import { syncMember } from "@/lib/zoho";
+import { syncMemberAndTrack } from "@/server/zoho-sync";
 import { sendEmail } from "@/lib/email";
 import { welcomeEmail } from "@/lib/templates";
 import { issueToken } from "@/lib/tokens";
@@ -42,25 +42,9 @@ export async function signupMember(input: SignupInput): Promise<{
 
   const created = !existing;
 
-  // Best-effort Zoho sync; failures do not block sign-up.
-  const zohoResult = await syncMember({
-    email: member.email,
-    name: member.name,
-    preferredChannel: member.preferredChannel,
-    emailConsent: member.emailConsent,
-    whatsappConsent: member.whatsappConsent,
-    utmSource: member.utmSource,
-    utmMedium: member.utmMedium,
-    utmCampaign: member.utmCampaign,
-    utmContent: member.utmContent,
-    referralCode: member.referralCode
-  });
-  if (zohoResult.zohoId && zohoResult.zohoId !== member.zohoId) {
-    await prisma.member.update({
-      where: { id: member.id },
-      data: { zohoId: zohoResult.zohoId }
-    });
-  }
+  // Best-effort Zoho sync; failures do not block sign-up. The helper records
+  // failures into ZohoSyncFailure so an organiser can retry from the dashboard.
+  await syncMemberAndTrack(member);
 
   // Issue long-lived tokens for preferences + unsubscribe.
   const prefToken = await issueToken({ memberId: member.id, purpose: "PREFERENCES" });

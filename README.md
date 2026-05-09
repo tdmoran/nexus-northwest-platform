@@ -35,6 +35,31 @@ MVP implementation of the Nexus Northwest Functional Specification (v1.2). One N
 - Per-IP rate limit (5 attempts / 60 s, in-memory; swap for Redis when running multi-instance)
 - Hidden honeypot field — bots that fill it get a 201 with no work done
 
+**Acquisition / reporting (`/dashboard/reports`)**
+- Sign-ups per day and per ISO week
+- Sign-ups by source with proportional bars
+- RSVP conversion per event (sent → Yes %)
+
+**QR + tracked links (`/dashboard/qr`)**
+- Build a tracked landing URL from `utm_*` + `ref`
+- Live SVG/PNG QR rendered server-side via `/api/qr`
+
+**Attendance (`/dashboard/events/[id]/check-in`)**
+- Searchable RSVP roster with check-in / no-show / reset buttons
+- Per-event live counts: RSVP-Yes, checked-in, no-show
+
+**Zoho resilience (NFR-005)**
+- `ZohoSyncFailure` table records every failed upsert with attempt count and last error
+- Sign-up still succeeds even when Zoho is unreachable
+- Dashboard banner shows unresolved count and a one-click retry (Super Admin only)
+- Successful retry clears the failure record automatically
+
+**Production deploy**
+- Multi-stage `Dockerfile` (Next.js standalone, non-root, Prisma engines included)
+- `docker-compose.prod.yml` brings up app + Postgres in one command
+- Container start runs `prisma migrate deploy` then `node server.js`
+- Initial migration is committed under `prisma/migrations/` so a fresh DB is one command away
+
 **Boundaries kept clean**
 - `src/lib/zoho.ts` — stubbed Zoho CRM upsert; flip `ZOHO_ENABLED=true` and provide credentials to use real API
 - `src/lib/email.ts` — `stub | sendgrid | resend` providers; stub writes `.eml` files to `.mail/`

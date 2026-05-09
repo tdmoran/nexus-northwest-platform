@@ -1,0 +1,4 @@
+-- AlterTable
+ALTER TABLE "RSVP"
+  ADD COLUMN "attendedAt" TIMESTAMP(3),
+  ADD COLUMN "noShow" BOOLEAN NOT NULL DEFAULT false;

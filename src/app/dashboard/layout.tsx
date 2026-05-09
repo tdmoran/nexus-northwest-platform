@@ -10,6 +10,8 @@ const BASE_NAV = [
   { href: "/dashboard/events", label: "Events" },
   { href: "/dashboard/members", label: "Members" },
   { href: "/dashboard/actions", label: "Actions" },
+  { href: "/dashboard/reports", label: "Reports" },
+  { href: "/dashboard/qr", label: "QR + links" },
   { href: "/dashboard/audit", label: "Audit log" },
   { href: "/dashboard/settings", label: "Settings" }
 ];

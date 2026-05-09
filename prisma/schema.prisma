@@ -84,6 +84,7 @@ model Member {
   rsvps               RSVP[]
   tokens              Token[]
   audit               AuditLog[]
+  zohoFailures        ZohoSyncFailure[]
 
   @@index([createdAt])
   @@index([utmSource])
@@ -132,6 +133,8 @@ model RSVP {
   memberId    String
   status      RSVPStatus
   channel     String?     // how the RSVP came in: email/whatsapp/web/etc
+  attendedAt  DateTime?   // populated at check-in
+  noShow      Boolean    @default(false)  // organiser flag for didn't-show
   createdAt   DateTime   @default(now())
   updatedAt   DateTime   @updatedAt
   event       Event      @relation(fields: [eventId], references: [id], onDelete: Cascade)
@@ -229,6 +232,26 @@ model Token {
   createdAt   DateTime @default(now())
 
   @@index([memberId, purpose])
+}
+
+// ----------------------------- Zoho sync failures --------------------------
+//
+// Persists each upsert that didn't reach Zoho so the dashboard can surface a
+// banner and an organiser can retry. Cleared automatically when a later upsert
+// of the same member succeeds.
+
+model ZohoSyncFailure {
+  id          String   @id @default(cuid())
+  memberId    String
+  member      Member   @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  attempts    Int      @default(1)
+  lastError   String
+  resolvedAt  DateTime?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@unique([memberId])
+  @@index([resolvedAt])
 }
 
 // ----------------------------- Reminders -----------------------------------

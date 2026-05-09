@@ -1,0 +1,50 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-nexus}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?postgres password required}
+      POSTGRES_DB: ${POSTGRES_DB:-nexus}
+    volumes:
+      - nexus_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-nexus} -d ${POSTGRES_DB:-nexus}"]
+      interval: 10s
+      timeout: 3s
+      retries: 10
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-nexus}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-nexus}?schema=public
+      NEXTAUTH_SECRET: ${NEXTAUTH_SECRET:?nextauth secret required}
+      NEXTAUTH_URL: ${NEXTAUTH_URL:?nextauth url required}
+      NEXT_PUBLIC_SITE_URL: ${NEXT_PUBLIC_SITE_URL:?site url required}
+      NEXT_PUBLIC_SITE_NAME: ${NEXT_PUBLIC_SITE_NAME:-Nexus Northwest}
+      TOKEN_SECRET: ${TOKEN_SECRET:?token secret required}
+      CRON_SECRET: ${CRON_SECRET:?cron secret required}
+      EMAIL_FROM: ${EMAIL_FROM:?email from required}
+      EMAIL_PROVIDER: ${EMAIL_PROVIDER:-stub}
+      EMAIL_API_KEY: ${EMAIL_API_KEY:-}
+      EMAIL_WEBHOOK_SECRET: ${EMAIL_WEBHOOK_SECRET:?email webhook secret required}
+      ZOHO_ENABLED: ${ZOHO_ENABLED:-false}
+      ZOHO_CLIENT_ID: ${ZOHO_CLIENT_ID:-}
+      ZOHO_CLIENT_SECRET: ${ZOHO_CLIENT_SECRET:-}
+      ZOHO_REFRESH_TOKEN: ${ZOHO_REFRESH_TOKEN:-}
+      ZOHO_API_DOMAIN: ${ZOHO_API_DOMAIN:-https://www.zohoapis.eu}
+      ZOHO_MODULE: ${ZOHO_MODULE:-Leads}
+      WHATSAPP_BROADCAST_GROUP_URL: ${WHATSAPP_BROADCAST_GROUP_URL:-}
+      WHATSAPP_DISCUSSION_GROUP_URL: ${WHATSAPP_DISCUSSION_GROUP_URL:-}
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+    ports:
+      - "${APP_PORT:-3000}:3000"
+
+volumes:
+  nexus_pgdata:

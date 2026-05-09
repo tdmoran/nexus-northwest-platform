@@ -1,3 +1,4 @@
+import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/db";
 import { log } from "@/lib/logger";
 
@@ -15,7 +16,9 @@ export async function audit(opts: {
         actorId: opts.actorId ?? null,
         memberId: opts.memberId ?? null,
         channel: opts.channel ?? null,
-        meta: opts.meta ?? undefined
+        // Prisma's JsonValue type is stricter than Record<string, unknown>; the
+        // cast is safe because the values we pass are JSON-serialisable.
+        meta: (opts.meta ?? undefined) as Prisma.InputJsonValue | undefined
       }
     });
   } catch (err) {
